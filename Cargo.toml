@@ -5,3 +5,5 @@ authors = ["phra <greensoncio@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+futures = "~0.1"
+tokio = "~0.1"
