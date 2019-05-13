@@ -26,6 +26,5 @@ fn main() {
         return;
     }
 
-    fetcher::fetcher::fetch_url(url)
-
+    fetcher::fetch_url(url);
 }
