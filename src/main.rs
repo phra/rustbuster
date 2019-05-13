@@ -58,6 +58,7 @@ fn main() {
         .arg(Arg::with_name("extensions")
             .help("Sets the extensions")
             .short("e")
+            .default_value("")
             .use_delimiter(true))
         .arg(Arg::with_name("mode")
             .help("Sets the mode of operation (dir, dns, fuzz)")
@@ -69,7 +70,7 @@ fn main() {
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
-    let extensions = matches.values_of("extensions").unwrap().collect::<Vec<&str>>();
+    let extensions = matches.values_of("extensions").unwrap().filter(|e| e.len() != 0).collect::<Vec<&str>>();
 
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_path);
