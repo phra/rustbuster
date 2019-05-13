@@ -1,49 +1,31 @@
-use futures::{
-    future,
-    Future
-};
-use tokio::{
-    io::AsyncWrite,
-    net::TcpStream
-};
+extern crate pretty_env_logger;
+extern crate hyper;
 
-use std::{
-    net::SocketAddr,
-    boxed::Box
-};
+#[macro_use] extern crate log;
 
-fn req() -> Box<Future<Item = (), Error = ()> + Send> {
-    for _ in 0..1000 {
-        let addr = "0.0.0.0:1337".parse::<SocketAddr>().unwrap();
-        let stream = TcpStream::connect(&addr);
+use std::env;
+mod fetcher;
 
-        let req_fut = stream
-            .map(|mut stream| {
-                let body = format!(
-                    "{}\r\n{}\r\n{}\r\n{}\r\n\r\n",
-                    "GET / HTTP/1.1",
-                    "Host: localhost",
-                    r#"User-Agent: ¯\_(ツ)_/¯"#,
-                    "Accept: */*"
-                );
-                stream.poll_write(&body.as_bytes()).unwrap();
-            })
-            .map_err(|e| {
-                println!("[ERROR]: {}", e);
-            });
+fn main() {
+    pretty_env_logger::init();
 
-        tokio::spawn(req_fut);
-    }
-    
-    Box::new(future::ok(()))
-}
-
-fn main() -> Result<(), Box<std::error::Error>> {
-    tokio::run(
-        futures::lazy(|| {
-            req()
+    // Some simple CLI args requirements...
+    let url = match env::args().nth(1) {
+        Some(url) => url,
+        None => {
+            error!("Usage: client <url>");
+            return;
         }
-    ));
+    };
 
-    Ok(())
+    // HTTPS requires picking a TLS implementation, so give a better
+    // warning if the user tries to request an 'https' URL.
+    let url = url.parse::<hyper::Uri>().unwrap();
+    if url.scheme_part().map(|s| s.as_ref()) != Some("http") {
+        println!("This example only works with 'http' URLs.");
+        return;
+    }
+
+    fetcher::fetcher::fetch_url(url)
+
 }
