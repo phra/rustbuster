@@ -5,5 +5,11 @@ authors = ["phra <greensoncio@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-futures = "~0.1"
-tokio = "~0.1"
+hyper = "^0.12.28"
+pretty_env_logger = "^0.3.0"
+log = "^0.4.6"
+
+[dependencies.clap]
+version = "2.33"
+default-features = false
+features = [ "suggestions", "color" ]
