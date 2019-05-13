@@ -69,10 +69,12 @@ fn main() {
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
+    let extensions = matches.values_of("extensions").unwrap().collect::<Vec<&str>>();
 
-    debug!("Using url: {}", url);
-    debug!("Using wordlist: {}", wordlist_path);
-    debug!("Using mode: {}", mode);
+    debug!("Using url: {:?}", url);
+    debug!("Using wordlist: {:?}", wordlist_path);
+    debug!("Using mode: {:?}", mode);
+    debug!("Using extensions: {:?}", extensions);
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -86,7 +88,8 @@ fn main() {
     match mode {
         "dir" => {
             debug!("using mode: dir");
-            load_wordlist_and_build_urls(wordlist_path, url);
+            let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
+            debug!("urls: {:#?}", urls);
             schedule_work();
             run();
         },
@@ -94,24 +97,31 @@ fn main() {
     }
 }
 
-fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str) {
+fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str, extensions: Vec<&str>) -> Vec<String> {
     debug!("loading wordlist");
     let contents = fs::read_to_string(wordlist_path)
         .expect("Something went wrong reading the file");
     
     let splitted_lines = contents.lines();
-    build_urls(splitted_lines, url);
+    build_urls(splitted_lines, url, extensions)
 }
 
-fn build_urls(splitted_lines: str::Lines, url: &str) {
+fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> Vec<String> {
     debug!("building urls");
+    let mut urls: Vec<String> = Vec::new();
     let urls_iter = splitted_lines
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
         .map(|word| format!("{}{}", url, word))
         .map(|url| url.to_owned());
+    
+    for url in urls_iter {
+        urls.push(url.to_owned());
+        for extension in extensions.iter() {
+            urls.push(format!("{}.{}", url, extension).to_owned())
+        }
+    }
 
-    let urls = urls_iter.collect::<Vec<String>>();
-    debug!("urls: {:#?}", urls);
+    urls
 }
 
 fn schedule_work() {
