@@ -1,9 +1,11 @@
 extern crate pretty_env_logger;
 extern crate hyper;
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use std::env;
+
 mod fetcher;
 
 fn main() {
@@ -26,5 +28,5 @@ fn main() {
         return;
     }
 
-    fetcher::fetch_url(url);
+    fetcher::run(url);
 }

@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use hyper::Client;
 use hyper::rt::{self, Future, Stream};
 
-pub fn fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
+fn fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
     let client = Client::new();
 
     client
