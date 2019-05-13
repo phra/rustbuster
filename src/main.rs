@@ -7,6 +7,7 @@ extern crate log;
 
 use std::env;
 use std::fs;
+use std::str;
 use clap::{Arg, App};
 
 mod fetcher;
@@ -31,7 +32,7 @@ fn _old_main() {
         return;
     }
 
-    fetcher::run(url);
+    fetcher::_run(url);
 }
 
 fn main() {
@@ -85,8 +86,7 @@ fn main() {
     match mode {
         "dir" => {
             debug!("using mode: dir");
-            load_wordlist(wordlist_path);
-            build_urls();
+            load_wordlist_and_build_urls(wordlist_path, url);
             schedule_work();
             run();
         },
@@ -94,17 +94,24 @@ fn main() {
     }
 }
 
-fn load_wordlist(path: &str) {
+fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str) {
     debug!("loading wordlist");
-    let contents = fs::read_to_string(path)
+    let contents = fs::read_to_string(wordlist_path)
         .expect("Something went wrong reading the file");
     
-    let splitted = contents.split("\n");
-    debug!("splitted {:?}", splitted);
+    let splitted_lines = contents.lines();
+    build_urls(splitted_lines, url);
 }
 
-fn build_urls() {
+fn build_urls(splitted_lines: str::Lines, url: &str) {
     debug!("building urls");
+    let urls_iter = splitted_lines
+        .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
+        .map(|word| format!("{}{}", url, word))
+        .map(|url| url.to_owned());
+
+    let urls = urls_iter.collect::<Vec<String>>();
+    debug!("urls: {:#?}", urls);
 }
 
 fn schedule_work() {
