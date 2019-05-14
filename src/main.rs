@@ -1,14 +1,14 @@
-extern crate pretty_env_logger;
-extern crate hyper;
 extern crate clap;
+extern crate hyper;
+extern crate pretty_env_logger;
 
 #[macro_use]
 extern crate log;
 
+use clap::{App, Arg};
 use std::env;
 use std::fs;
 use std::str;
-use clap::{Arg, App};
 
 mod fetcher;
 
@@ -41,36 +41,50 @@ fn main() {
         .version("0.1")
         .author("phra <greensoncio@gmail.com>, ps1dr3x <michele@federici.tech>")
         .about("DirBuster for rust")
-        .arg(Arg::with_name("verbose")
-            .short("v")
-            .multiple(true)
-            .help("Sets the level of verbosity"))
-        .arg(Arg::with_name("url")
-            .help("Sets the target URL")
-            .short("u")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("wordlist")
-            .help("Sets the wordlist")
-            .short("w")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("extensions")
-            .help("Sets the extensions")
-            .short("e")
-            .default_value("")
-            .use_delimiter(true))
-        .arg(Arg::with_name("mode")
-            .help("Sets the mode of operation (dir, dns, fuzz)")
-            .short("m")
-            .takes_value(true)
-            .default_value("dir"))
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
+        .arg(
+            Arg::with_name("url")
+                .help("Sets the target URL")
+                .short("u")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("wordlist")
+                .help("Sets the wordlist")
+                .short("w")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("extensions")
+                .help("Sets the extensions")
+                .short("e")
+                .default_value("")
+                .use_delimiter(true),
+        )
+        .arg(
+            Arg::with_name("mode")
+                .help("Sets the mode of operation (dir, dns, fuzz)")
+                .short("m")
+                .takes_value(true)
+                .default_value("dir"),
+        )
         .get_matches();
-    
+
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
-    let extensions = matches.values_of("extensions").unwrap().filter(|e| e.len() != 0).collect::<Vec<&str>>();
+    let extensions = matches
+        .values_of("extensions")
+        .unwrap()
+        .filter(|e| e.len() != 0)
+        .collect::<Vec<&str>>();
 
     // HTTPS requires picking a TLS implementation, so give a better
     // warning if the user tries to request an 'https' URL.
@@ -80,7 +94,7 @@ fn main() {
                 println!("This example only works with 'http' URLs.");
                 return;
             }
-        },
+        }
         Err(e) => {
             error!("URI: {}", e);
             return;
@@ -107,15 +121,19 @@ fn main() {
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             debug!("urls: {:#?}", urls);
             fetcher::_run(urls);
-        },
+        }
         _ => (),
     }
 }
 
-fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str, extensions: Vec<&str>) -> Vec<hyper::Uri> {
+fn load_wordlist_and_build_urls(
+    wordlist_path: &str,
+    url: &str,
+    extensions: Vec<&str>,
+) -> Vec<hyper::Uri> {
     debug!("loading wordlist");
-    let contents = fs::read_to_string(wordlist_path)
-        .expect("Something went wrong reading the file");
+    let contents =
+        fs::read_to_string(wordlist_path).expect("Something went wrong reading the file");
 
     let splitted_lines = contents.lines();
     build_urls(splitted_lines, url, extensions)
@@ -132,7 +150,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
         match url.parse::<hyper::Uri>() {
             Ok(v) => {
                 urls.push(v);
-            },
+            }
             Err(e) => {
                 error!("URI: {}", e);
             }
@@ -142,7 +160,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
             match format!("{}.{}", url, extension).parse::<hyper::Uri>() {
                 Ok(v) => {
                     urls.push(v);
-                },
+                }
                 Err(e) => {
                     error!("URI: {}", e);
                 }

@@ -1,8 +1,11 @@
-use std::io::{self, Write};
+use hyper::rt::{self, lazy, Future, Stream};
 use hyper::Client;
-use hyper::rt::{self, Future, Stream, lazy};
+use std::io::{self, Write};
 
-fn _fetch_url(client: hyper::Client<hyper::client::HttpConnector>, url: hyper::Uri) -> impl Future<Item=(), Error=()> {
+fn _fetch_url(
+    client: hyper::Client<hyper::client::HttpConnector>,
+    url: hyper::Uri,
+) -> impl Future<Item = (), Error = ()> {
     client
         // Fetch the url...
         .get(url)
@@ -15,7 +18,8 @@ fn _fetch_url(client: hyper::Client<hyper::client::HttpConnector>, url: hyper::U
             // when the stream is finished, and calls the closure on
             // each chunk of the body...
             res.into_body().for_each(|chunk| {
-                io::stdout().write_all(&chunk)
+                io::stdout()
+                    .write_all(&chunk)
                     .map_err(|e| panic!("example expects stdout is open, error={}", e))
             })
         })
@@ -31,13 +35,11 @@ fn _fetch_url(client: hyper::Client<hyper::client::HttpConnector>, url: hyper::U
 
 pub fn _run(urls: Vec<hyper::Uri>) {
     let client = Client::new();
-    rt::run(
-        lazy(move || {
-            for url in urls {
-                rt::spawn(_fetch_url(client, url));
-            }
-        })
-    );
+    rt::run(lazy(move || {
+        for url in urls {
+            rt::spawn(_fetch_url(client, url));
+        }
+    }));
 
     // Run the runtime with the future trying to fetch and print this URL.
     //
