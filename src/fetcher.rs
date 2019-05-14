@@ -1,10 +1,8 @@
 use std::io::{self, Write};
 use hyper::Client;
-use hyper::rt::{self, Future, Stream};
+use hyper::rt::{self, Future, Stream, lazy};
 
-fn _fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
-    let client = Client::new();
-
+fn _fetch_url(client: hyper::Client<hyper::client::HttpConnector>, url: hyper::Uri) -> impl Future<Item=(), Error=()> {
     client
         // Fetch the url...
         .get(url)
@@ -31,8 +29,16 @@ fn _fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
         })
 }
 
-pub fn _run(url: hyper::Uri) {
-    rt::run(_fetch_url(url));
+pub fn _run(urls: Vec<hyper::Uri>) {
+    let client = Client::new();
+    rt::run(
+        lazy(move || {
+            for url in urls {
+                rt::spawn(_fetch_url(client, url));
+            }
+        })
+    );
+
     // Run the runtime with the future trying to fetch and print this URL.
     //
     // Note that in more complicated use cases, the runtime should probably

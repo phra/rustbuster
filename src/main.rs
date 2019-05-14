@@ -72,6 +72,21 @@ fn main() {
     let mode = matches.value_of("mode").unwrap();
     let extensions = matches.values_of("extensions").unwrap().filter(|e| e.len() != 0).collect::<Vec<&str>>();
 
+    // HTTPS requires picking a TLS implementation, so give a better
+    // warning if the user tries to request an 'https' URL.
+    match url.parse::<hyper::Uri>() {
+        Ok(v) => {
+            if v.scheme_part().map(|s| s.as_ref()) != Some("http") {
+                println!("This example only works with 'http' URLs.");
+                return;
+            }
+        },
+        Err(e) => {
+            error!("URI: {}", e);
+            return;
+        }
+    }
+
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_path);
     debug!("Using mode: {:?}", mode);
@@ -91,44 +106,49 @@ fn main() {
             debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             debug!("urls: {:#?}", urls);
-            schedule_work();
-            run();
+            fetcher::_run(urls);
         },
         _ => (),
     }
 }
 
-fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str, extensions: Vec<&str>) -> Vec<String> {
+fn load_wordlist_and_build_urls(wordlist_path: &str, url: &str, extensions: Vec<&str>) -> Vec<hyper::Uri> {
     debug!("loading wordlist");
     let contents = fs::read_to_string(wordlist_path)
         .expect("Something went wrong reading the file");
-    
+
     let splitted_lines = contents.lines();
     build_urls(splitted_lines, url, extensions)
 }
 
-fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> Vec<String> {
+fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> Vec<hyper::Uri> {
     debug!("building urls");
-    let mut urls: Vec<String> = Vec::new();
+    let mut urls: Vec<hyper::Uri> = Vec::new();
     let urls_iter = splitted_lines
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| format!("{}{}", url, word))
-        .map(|url| url.to_owned());
-    
+        .map(|word| format!("{}{}", url, word));
+
     for url in urls_iter {
-        urls.push(url.to_owned());
+        match url.parse::<hyper::Uri>() {
+            Ok(v) => {
+                urls.push(v);
+            },
+            Err(e) => {
+                error!("URI: {}", e);
+            }
+        }
+
         for extension in extensions.iter() {
-            urls.push(format!("{}.{}", url, extension).to_owned());
+            match format!("{}.{}", url, extension).parse::<hyper::Uri>() {
+                Ok(v) => {
+                    urls.push(v);
+                },
+                Err(e) => {
+                    error!("URI: {}", e);
+                }
+            }
         }
     }
 
     urls
-}
-
-fn schedule_work() {
-    debug!("scheduling work");
-}
-
-fn run() {
-    debug!("run!");
 }
