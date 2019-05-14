@@ -118,7 +118,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
     for url in urls_iter {
         urls.push(url.to_owned());
         for extension in extensions.iter() {
-            urls.push(format!("{}.{}", url, extension).to_owned())
+            urls.push(format!("{}.{}", url, extension).to_owned());
         }
     }
 
