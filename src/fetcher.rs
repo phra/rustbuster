@@ -44,12 +44,12 @@ fn _fetch_url(
         })
 }
 
-pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>) {
+pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize) {
     let client = Client::new();
 
     let stream = futures::stream::iter_ok(urls)
         .map(move |url| _fetch_url(tx.clone(), &client, url))
-        .buffer_unordered(1)
+        .buffer_unordered(n_threads)
         .for_each(Ok)
         .map_err(|err| eprintln!("Err {:?}", err));
 

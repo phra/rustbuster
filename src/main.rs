@@ -47,11 +47,24 @@ fn main() {
                 .takes_value(true)
                 .default_value("dir"),
         )
+        .arg(
+            Arg::with_name("threads")
+                .alias("workers")
+                .help("Sets the amount of concurrent requests")
+                .short("t")
+                .default_value("10")
+                .takes_value(true),
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
+    let n_threads = matches
+        .value_of("threads")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
     let extensions = matches
         .values_of("extensions")
         .unwrap()
@@ -77,25 +90,26 @@ fn main() {
     debug!("Using wordlist: {:?}", wordlist_path);
     debug!("Using mode: {:?}", mode);
     debug!("Using extensions: {:?}", extensions);
+    debug!("Using concurrent requests: {:?}", n_threads);
+    debug!("Using mode: dir");
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
     match matches.occurrences_of("verbose") {
-        0 => info!("No verbose info"),
-        1 => info!("Some verbose info"),
-        2 => info!("Tons of verbose info"),
-        3 | _ => info!("Don't be crazy"),
+        0 => trace!("No verbose info"),
+        1 => trace!("Some verbose info"),
+        2 => trace!("Tons of verbose info"),
+        3 | _ => trace!("Don't be crazy"),
     }
 
     match mode {
         "dir" => {
-            debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             let numbers_of_request = urls.len();
             let (tx, rx) = channel();
             let mut results: Vec<fetcher::Target> = Vec::new();
 
-            thread::spawn(move || fetcher::_run(tx, urls));
+            thread::spawn(move || fetcher::_run(tx, urls, n_threads));
 
             while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
