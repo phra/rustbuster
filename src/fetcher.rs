@@ -2,10 +2,14 @@ use futures::Stream;
 use hyper::{
     rt::{self, Future},
     Client, Method, StatusCode, Uri,
+    client::HttpConnector
+};
+use hyper_tls::{
+    self,
+    HttpsConnector
 };
 
 use std::sync::mpsc::Sender;
-use hyper_tls::HttpsConnector;
 
 #[derive(Debug, Clone)]
 pub struct Target {
@@ -17,7 +21,7 @@ pub struct Target {
 
 fn _fetch_url(
     tx: Sender<Target>,
-    client: &hyper::Client<_, hyper::Body>,
+    client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
@@ -45,9 +49,9 @@ fn _fetch_url(
         })
 }
 
-pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize, use_https: bool) {
+pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize) {
     let https = HttpsConnector::new(4).expect("TLS initialization failed");
-    let client = if use_https { Client::builder().build(https) } else { Client::builder().build_http() };
+    let client = Client::builder().build(https);
 
     let stream = futures::stream::iter_ok(urls)
         .map(move |url| _fetch_url(tx.clone(), &client, url))
