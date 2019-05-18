@@ -47,55 +47,76 @@ fn main() {
                 .takes_value(true)
                 .default_value("dir"),
         )
+        .arg(
+            Arg::with_name("threads")
+                .alias("workers")
+                .help("Sets the amount of concurrent requests")
+                .short("t")
+                .default_value("10")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("ignore-certificate")
+                .alias("no-check-certificate")
+                .help("Disables TLS certificate validation")
+                .short("k"),
+        )
+        .arg(
+            Arg::with_name("exit-on-error")
+                .help("Exits on connection errors")
+                .short("K"),
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
+    let ignore_certificate = matches.is_present("ignore-certificate");
+    let exit_on_connection_errors = matches.is_present("exit-on-error");
+    let n_threads = matches
+        .value_of("threads")
+        .unwrap()
+        .parse::<usize>()
+        .expect("threads is a number");
     let extensions = matches
         .values_of("extensions")
         .unwrap()
         .filter(|e| e.len() != 0)
         .collect::<Vec<&str>>();
 
-    // HTTPS requires picking a TLS implementation, so give a better
-    // warning if the user tries to request an 'https' URL.
-    match url.parse::<hyper::Uri>() {
-        Ok(v) => {
-            if v.scheme_part().map(|s| s.as_ref()) != Some("http") {
-                println!("This example only works with 'http' URLs.");
-                return;
-            }
-        }
-        Err(e) => {
-            error!("URI: {}", e);
-            return;
-        }
-    }
-
+    debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_path);
     debug!("Using mode: {:?}", mode);
     debug!("Using extensions: {:?}", extensions);
+    debug!("Using concurrent requests: {:?}", n_threads);
+    debug!("Using certificate validation: {:?}", !ignore_certificate);
+    debug!(
+        "Using exit on connection errors: {:?}",
+        exit_on_connection_errors
+    );
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
     match matches.occurrences_of("verbose") {
-        0 => info!("No verbose info"),
-        1 => info!("Some verbose info"),
-        2 => info!("Tons of verbose info"),
-        3 | _ => info!("Don't be crazy"),
+        0 => trace!("No verbose info"),
+        1 => trace!("Some verbose info"),
+        2 => trace!("Tons of verbose info"),
+        3 | _ => trace!("Don't be crazy"),
     }
 
     match mode {
         "dir" => {
-            debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             let numbers_of_request = urls.len();
             let (tx, rx) = channel();
             let mut results: Vec<fetcher::Target> = Vec::new();
+            let config = fetcher::Config {
+                n_threads,
+                ignore_certificate,
+            };
 
-            thread::spawn(move || fetcher::_run(tx, urls));
+            thread::spawn(move || fetcher::_run(tx, urls, &config));
 
             while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
@@ -104,7 +125,13 @@ fn main() {
                 };
 
                 match &msg.error {
-                    Some(e) => error!("{:?}", e),
+                    Some(e) => {
+                        error!("{:?}", e);
+                        if results.len() == 0 || exit_on_connection_errors {
+                            warn!("Check connectivity to the target");
+                            break;
+                        }
+                    }
                     None => (),
                 }
 
