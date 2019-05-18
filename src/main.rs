@@ -92,29 +92,23 @@ fn main() {
             debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             let numbers_of_request = urls.len();
-            let mut n_msgs = 0;
             let (tx, rx) = channel();
             let mut results: Vec<fetcher::Target> = Vec::new();
 
             thread::spawn(move || fetcher::_run(tx, urls));
 
-            while n_msgs != numbers_of_request {
+            while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
                     Err(_err) => continue,
                 };
 
-                n_msgs += 1;
-
-                match msg {
-                    Ok(res) => {
-                        trace!("{:?}", res);
-                        results.push(res);
-                    }
-                    Err(e) => {
-                        error!("{}", e);
-                    }
+                match &msg.error {
+                    Some(e) => error!("{:?}", e),
+                    None => ()
                 }
+
+                results.push(msg);
             }
         }
         _ => (),
