@@ -1,40 +1,57 @@
-use std::io::{self, Write};
-use hyper::Client;
-use hyper::rt::{self, Future, Stream};
+use futures::Stream;
+use hyper::{
+    rt::{self, Future},
+    Client, Method, StatusCode, Uri,
+};
 
-fn _fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
-    let client = Client::new();
+use std::sync::mpsc::Sender;
+
+#[derive(Debug, Clone)]
+pub struct Target {
+    url: Uri,
+    method: Method,
+    status: StatusCode,
+    pub error: Option<String>,
+}
+
+fn _fetch_url(
+    tx: Sender<Target>,
+    client: &hyper::Client<hyper::client::HttpConnector>,
+    url: Uri,
+) -> impl Future<Item = (), Error = ()> {
+    let tx_err = tx.clone();
+    let mut target = Target {
+        url: url.clone(),
+        method: Method::GET,
+        status: StatusCode::default(),
+        error: None,
+    };
+    let mut target_err = target.clone();
 
     client
-        // Fetch the url...
         .get(url)
-        // And then, if we get a response back...
-        .and_then(|res| {
-            println!("Response: {}", res.status());
-            println!("Headers: {:#?}", res.headers());
+        .and_then(move |res| {
+            target.status = res.status();
 
-            // The body is a stream, and for_each returns a new Future
-            // when the stream is finished, and calls the closure on
-            // each chunk of the body...
-            res.into_body().for_each(|chunk| {
-                io::stdout().write_all(&chunk)
-                    .map_err(|e| panic!("example expects stdout is open, error={}", e))
-            })
+            tx.send(target).unwrap();
+
+            Ok(())
         })
-        // If all good, just tell the user...
-        .map(|_| {
-            println!("\n\nDone.");
-        })
-        // If there was an error, let the user know...
-        .map_err(|err| {
-            eprintln!("Error {}", err);
+        .or_else(move |e| {
+            target_err.error = Some(e.to_string());
+            tx_err.send(target_err).unwrap();
+            Ok(())
         })
 }
 
-pub fn _run(url: hyper::Uri) {
-    rt::run(_fetch_url(url));
-    // Run the runtime with the future trying to fetch and print this URL.
-    //
-    // Note that in more complicated use cases, the runtime should probably
-    // run on its own, and futures should just be spawned into it.
+pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>) {
+    let client = Client::new();
+
+    let stream = futures::stream::iter_ok(urls)
+        .map(move |url| _fetch_url(tx.clone(), &client, url))
+        .buffer_unordered(1)
+        .for_each(Ok)
+        .map_err(|err| eprintln!("Err {:?}", err));
+
+    rt::run(stream);
 }
