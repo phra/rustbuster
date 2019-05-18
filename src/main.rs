@@ -70,14 +70,15 @@ fn main() {
         .unwrap()
         .filter(|e| e.len() != 0)
         .collect::<Vec<&str>>();
+    let mut use_https = false;
 
     // HTTPS requires picking a TLS implementation, so give a better
     // warning if the user tries to request an 'https' URL.
     match url.parse::<hyper::Uri>() {
         Ok(v) => {
             if v.scheme_part().map(|s| s.as_ref()) != Some("http") {
-                println!("This example only works with 'http' URLs.");
-                return;
+                debug!("Using https");
+                use_https = true;
             }
         }
         Err(e) => {
@@ -109,7 +110,7 @@ fn main() {
             let (tx, rx) = channel();
             let mut results: Vec<fetcher::Target> = Vec::new();
 
-            thread::spawn(move || fetcher::_run(tx, urls, n_threads));
+            thread::spawn(move || fetcher::_run(tx, urls, n_threads, use_https));
 
             while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
