@@ -1,5 +1,6 @@
 use hyper::rt::{self, lazy, Future};
 use hyper::{Client, StatusCode};
+use futures::Stream;
 
 fn _fetch_url(
     client: &hyper::Client<hyper::client::HttpConnector>,
@@ -24,13 +25,13 @@ fn _fetch_url(
 }
 
 pub fn _run(urls: Vec<hyper::Uri>) {
-    rt::run(lazy(|| {
-        let client = Client::new();
+    let client = Client::new();
 
-        for url in urls {
-            rt::spawn(_fetch_url(&client, url));
-        }
+    let stream = futures::stream::iter_ok(urls)
+        .map(move |url| _fetch_url(&client, url))
+        .buffer_unordered(1)
+        .for_each(|_| Ok(()))
+        .map_err(|_| eprintln!("Err"));
 
-        Ok(())
-    }));
+    rt::run(stream);
 }
