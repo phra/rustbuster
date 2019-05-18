@@ -128,6 +128,7 @@ fn main() {
                     Some(e) => {
                         error!("{:?}", e);
                         if results.len() == 0 || exit_on_connection_errors {
+                            warn!("Check connectivity to the target");
                             break;
                         }
                     }

@@ -47,7 +47,7 @@ fn _fetch_url(
         })
         .or_else(move |e| {
             target_err.error = Some(e.to_string());
-            tx_err.send(target_err).unwrap();
+            tx_err.send(target_err).unwrap_or_else(|_| ());
             Ok(())
         })
 }
