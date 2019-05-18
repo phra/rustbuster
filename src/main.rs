@@ -7,8 +7,6 @@ use std::{
     sync::mpsc::channel
 };
 
-use crate::fetcher::FetcherMessage;
-
 mod fetcher;
 
 fn main() {
@@ -99,9 +97,7 @@ fn main() {
 
             let (tx, rx) = channel();
 
-            thread::spawn(move || {
-                fetcher::_run(tx, urls);
-            });
+            thread::spawn(move || fetcher::_run(tx, urls));
 
             loop {
                 let msg = match rx.recv() {
@@ -110,11 +106,11 @@ fn main() {
                 };
 
                 match msg {
-                    FetcherMessage::Response(res) => {
+                    Ok(res) => {
                         println!("{:?}", res);
                     }
-                    FetcherMessage::Log(log) => {
-                        println!("{:?}", log);
+                    Err(e) => {
+                        println!("{:?}", e);
                     }
                 }
             }

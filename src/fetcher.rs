@@ -1,45 +1,48 @@
 use hyper::{
-    Client, StatusCode,
-    rt::{self, Future}
+    Client,
+    Uri,
+    Method,
+    StatusCode,
+    rt::{self, Future},
+    error::Error
 };
 use futures::Stream;
+
 use std::sync::mpsc::Sender;
 
 #[derive(Debug)]
-pub enum FetcherMessage {
-    Response(String),
-    Log(String)
+pub struct Target {
+    url: Uri,
+    method: Method,
+    status: StatusCode
 }
+
+type FetcherMessage = Result<Target, Error>;
 
 fn _fetch_url(
     tx: Sender<FetcherMessage>,
     client: &hyper::Client<hyper::client::HttpConnector>,
-    url: hyper::Uri,
+    url: Uri,
 ) -> impl Future<Item = (), Error = ()> {
+    let in_url = url.clone();
+    let tx_err = tx.clone();
     client
         // Fetch the url...
         .get(url)
         // And then, if we get a response back...
         .and_then(move |res| {
-            if res.status() == StatusCode::OK {
-                println!("Response: {}", res.status());
-                println!("Headers: {:#?}", res.headers());
+            let res = Target {
+                url: in_url,
+                method: Method::GET,
+                status: res.status()
+            };
 
-                tx.send(
-                    FetcherMessage::Log(String::from("Status != 200"))
-                ).unwrap();
-            }
-
-            tx.send(
-                FetcherMessage::Response(String::from("Response received!"))
-            ).unwrap();
+            tx.send(Ok(res)).unwrap();
 
             Ok(())
         })
         // If there was an error, let the user know...
-        .map_err(|err| {
-            eprintln!("Error {}", err);
-        })
+        .map_err(move |e| tx_err.send(Err(e)).unwrap())
 }
 
 pub fn _run(tx: Sender<FetcherMessage>, urls: Vec<hyper::Uri>) {
