@@ -61,12 +61,18 @@ fn main() {
                 .help("Disables TLS certificate validation")
                 .short("k"),
         )
+        .arg(
+            Arg::with_name("exit-on-error")
+                .help("Exits on connection errors")
+                .short("K"),
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
     let ignore_certificate = matches.is_present("ignore-certificate");
+    let exit_on_connection_errors = matches.is_present("exit-on-error");
     let n_threads = matches
         .value_of("threads")
         .unwrap()
@@ -85,6 +91,10 @@ fn main() {
     debug!("Using extensions: {:?}", extensions);
     debug!("Using concurrent requests: {:?}", n_threads);
     debug!("Using certificate validation: {:?}", !ignore_certificate);
+    debug!(
+        "Using exit on connection errors: {:?}",
+        exit_on_connection_errors
+    );
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -115,7 +125,12 @@ fn main() {
                 };
 
                 match &msg.error {
-                    Some(e) => error!("{:?}", e),
+                    Some(e) => {
+                        error!("{:?}", e);
+                        if results.len() == 0 || exit_on_connection_errors {
+                            break;
+                        }
+                    }
                     None => (),
                 }
 
