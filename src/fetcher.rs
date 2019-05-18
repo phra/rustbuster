@@ -36,7 +36,10 @@ fn _fetch_url(
 
             Ok(())
         })
-        .map_err(move |e| tx_err.send(Err(e)).unwrap())
+        .or_else(move |e| {
+            tx_err.send(Err(e)).unwrap();
+            Ok(())
+        })
 }
 
 pub fn _run(tx: Sender<FetcherMessage>, urls: Vec<hyper::Uri>) {
