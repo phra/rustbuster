@@ -1,13 +1,10 @@
 use futures::Stream;
 use hyper::{
+    client::HttpConnector,
     rt::{self, Future},
     Client, Method, StatusCode, Uri,
-    client::HttpConnector
 };
-use hyper_tls::{
-    self,
-    HttpsConnector
-};
+use hyper_tls::{self, HttpsConnector};
 use native_tls;
 use std::sync::mpsc::Sender;
 
@@ -17,6 +14,12 @@ pub struct Target {
     method: Method,
     status: StatusCode,
     pub error: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Config {
+    pub n_threads: usize,
+    pub ignore_certificate: bool,
 }
 
 fn _fetch_url(
@@ -49,18 +52,20 @@ fn _fetch_url(
         })
 }
 
-pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize) {
+pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, config: &Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
-    tls_connector_builder.danger_accept_invalid_certs(true);
-    let tls_connector = tls_connector_builder.build().unwrap();
-    let http_connector = HttpConnector::new(n_threads);
+    tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
+    let tls_connector = tls_connector_builder
+        .build()
+        .expect("TLS initialization failed");
+    let mut http_connector = HttpConnector::new(config.n_threads);
+    http_connector.enforce_http(false);
     let https_connector = HttpsConnector::from((http_connector, tls_connector));
-    let https = HttpsConnector::new(n_threads);
-    let client = Client::builder().build(https);
+    let client = Client::builder().build(https_connector);
 
     let stream = futures::stream::iter_ok(urls)
         .map(move |url| _fetch_url(tx.clone(), &client, url))
-        .buffer_unordered(n_threads)
+        .buffer_unordered(config.n_threads)
         .for_each(Ok)
         .map_err(|err| eprintln!("Err {:?}", err));
 

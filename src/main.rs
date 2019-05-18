@@ -55,11 +55,18 @@ fn main() {
                 .default_value("10")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("ignore-certificate")
+                .alias("no-check-certificate")
+                .help("Disables TLS certificate validation")
+                .short("k"),
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
+    let ignore_certificate = matches.is_present("ignore-certificate");
     let n_threads = matches
         .value_of("threads")
         .unwrap()
@@ -71,12 +78,13 @@ fn main() {
         .filter(|e| e.len() != 0)
         .collect::<Vec<&str>>();
 
+    debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_path);
     debug!("Using mode: {:?}", mode);
     debug!("Using extensions: {:?}", extensions);
     debug!("Using concurrent requests: {:?}", n_threads);
-    debug!("Using mode: dir");
+    debug!("Using certificate validation: {:?}", !ignore_certificate);
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -93,8 +101,12 @@ fn main() {
             let numbers_of_request = urls.len();
             let (tx, rx) = channel();
             let mut results: Vec<fetcher::Target> = Vec::new();
+            let config = fetcher::Config {
+                n_threads,
+                ignore_certificate,
+            };
 
-            thread::spawn(move || fetcher::_run(tx, urls, n_threads));
+            thread::spawn(move || fetcher::_run(tx, urls, &config));
 
             while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
