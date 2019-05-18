@@ -8,7 +8,7 @@ use hyper_tls::{
     self,
     HttpsConnector
 };
-
+use native_tls;
 use std::sync::mpsc::Sender;
 
 #[derive(Debug, Clone)]
@@ -50,7 +50,12 @@ fn _fetch_url(
 }
 
 pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize) {
-    let https = HttpsConnector::new(n_threads).expect("TLS initialization failed");
+    let mut tls_connector_builder = native_tls::TlsConnector::builder();
+    tls_connector_builder.danger_accept_invalid_certs(true);
+    let tls_connector = tls_connector_builder.build().unwrap();
+    let http_connector = HttpConnector::new(n_threads);
+    let https_connector = HttpsConnector::from((http_connector, tls_connector));
+    let https = HttpsConnector::new(n_threads);
     let client = Client::builder().build(https);
 
     let stream = futures::stream::iter_ok(urls)
