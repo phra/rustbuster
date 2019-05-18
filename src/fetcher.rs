@@ -1,12 +1,9 @@
-use hyper::{
-    Client,
-    Uri,
-    Method,
-    StatusCode,
-    rt::{self, Future},
-    error::Error
-};
 use futures::Stream;
+use hyper::{
+    error::Error,
+    rt::{self, Future},
+    Client, Method, StatusCode, Uri,
+};
 
 use std::sync::mpsc::Sender;
 
@@ -14,7 +11,7 @@ use std::sync::mpsc::Sender;
 pub struct Target {
     url: Uri,
     method: Method,
-    status: StatusCode
+    status: StatusCode,
 }
 
 type FetcherMessage = Result<Target, Error>;
@@ -27,21 +24,18 @@ fn _fetch_url(
     let in_url = url.clone();
     let tx_err = tx.clone();
     client
-        // Fetch the url...
         .get(url)
-        // And then, if we get a response back...
         .and_then(move |res| {
             let res = Target {
                 url: in_url,
                 method: Method::GET,
-                status: res.status()
+                status: res.status(),
             };
 
             tx.send(Ok(res)).unwrap();
 
             Ok(())
         })
-        // If there was an error, let the user know...
         .map_err(move |e| tx_err.send(Err(e)).unwrap())
 }
 
@@ -52,7 +46,7 @@ pub fn _run(tx: Sender<FetcherMessage>, urls: Vec<hyper::Uri>) {
         .map(move |url| _fetch_url(tx.clone(), &client, url))
         .buffer_unordered(1)
         .for_each(Ok)
-        .map_err(|_| eprintln!("Err"));
+        .map_err(|err| eprintln!("Err {:?}", err));
 
     rt::run(stream);
 }

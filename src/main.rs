@@ -1,11 +1,9 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use clap::{App, Arg};
 
-use std::{
-    fs, str, thread,
-    sync::mpsc::channel
-};
+use std::{fs, str, sync::mpsc::channel, thread};
 
 mod fetcher;
 
@@ -93,24 +91,26 @@ fn main() {
         "dir" => {
             debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
-            debug!("urls: {:#?}", urls);
-
+            let numbers_of_request = urls.len();
             let (tx, rx) = channel();
+            let mut results: Vec<fetcher::Target> = Vec::new();
 
             thread::spawn(move || fetcher::_run(tx, urls));
 
-            loop {
+            while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
-                    Err(_err) => continue
+                    Err(_err) => continue,
                 };
 
                 match msg {
                     Ok(res) => {
-                        println!("{:?}", res);
+                        trace!("{:?}", res);
+                        results.push(res);
                     }
                     Err(e) => {
-                        println!("{:?}", e);
+                        error!("{}", e);
+                        break;
                     }
                 }
             }
