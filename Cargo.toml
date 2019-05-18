@@ -1,7 +1,7 @@
 [package]
 name = "rustbuster"
 version = "0.1.0"
-authors = ["phra <greensoncio@gmail.com>"]
+authors = ["phra <greensoncio@gmail.com>", "ps1dr3x <michele@federici.tech>"]
 edition = "2018"
 
 [dependencies]
