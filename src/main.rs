@@ -105,7 +105,7 @@ fn main() {
 
                 match &msg.error {
                     Some(e) => error!("{:?}", e),
-                    None => ()
+                    None => (),
                 }
 
                 results.push(msg);

@@ -11,7 +11,7 @@ pub struct Target {
     url: Uri,
     method: Method,
     status: StatusCode,
-    pub error: Option<String>
+    pub error: Option<String>,
 }
 
 fn _fetch_url(
@@ -24,7 +24,7 @@ fn _fetch_url(
         url: url.clone(),
         method: Method::GET,
         status: StatusCode::default(),
-        error: None
+        error: None,
     };
     let mut target_err = target.clone();
 
