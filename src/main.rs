@@ -1,13 +1,13 @@
-extern crate clap;
-extern crate hyper;
-extern crate pretty_env_logger;
-
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
 
 use clap::{App, Arg};
-use std::fs;
-use std::str;
+
+use std::{
+    fs, str, thread,
+    sync::mpsc::channel
+};
+
+use crate::fetcher::FetcherMessage;
 
 mod fetcher;
 
@@ -96,7 +96,28 @@ fn main() {
             debug!("using mode: dir");
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             debug!("urls: {:#?}", urls);
-            fetcher::_run(urls);
+
+            let (tx, rx) = channel();
+
+            thread::spawn(move || {
+                fetcher::_run(tx, urls);
+            });
+
+            loop {
+                let msg = match rx.recv() {
+                    Ok(msg) => msg,
+                    Err(_err) => continue
+                };
+
+                match msg {
+                    FetcherMessage::Response(res) => {
+                        println!("{:?}", res);
+                    }
+                    FetcherMessage::Log(log) => {
+                        println!("{:?}", log);
+                    }
+                }
+            }
         }
         _ => (),
     }
