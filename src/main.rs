@@ -77,7 +77,7 @@ fn main() {
         .value_of("threads")
         .unwrap()
         .parse::<usize>()
-        .unwrap();
+        .expect("threads is a number");
     let extensions = matches
         .values_of("extensions")
         .unwrap()
