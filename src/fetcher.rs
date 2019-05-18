@@ -50,7 +50,7 @@ fn _fetch_url(
 }
 
 pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, n_threads: usize) {
-    let https = HttpsConnector::new(4).expect("TLS initialization failed");
+    let https = HttpsConnector::new(n_threads).expect("TLS initialization failed");
     let client = Client::builder().build(https);
 
     let stream = futures::stream::iter_ok(urls)
