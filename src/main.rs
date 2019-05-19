@@ -138,6 +138,14 @@ fn main() {
         .map(|s| hyper::StatusCode::from_str(s).unwrap())
         .collect::<Vec<hyper::StatusCode>>();
 
+    match url.parse::<hyper::Uri>() {
+        Err(e) => {
+            error!("Invalid URL: {}", e);
+            return;
+        },
+        Ok(_) => (),
+    }
+
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_path);
