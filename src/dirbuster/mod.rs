@@ -21,9 +21,9 @@ fn _fetch_url(
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
     let mut target = SingleScanResult {
-        url: url.clone(),
-        method: Method::GET,
-        status: StatusCode::default(),
+        url: url.to_string(),
+        method: Method::GET.to_string(),
+        status: StatusCode::default().to_string(),
         error: None,
     };
     let mut target_err = target.clone();
@@ -31,7 +31,7 @@ fn _fetch_url(
     client
         .get(url)
         .and_then(move |res| {
-            target.status = res.status();
+            target.status = res.status().to_string();
 
             tx.send(target).unwrap();
 

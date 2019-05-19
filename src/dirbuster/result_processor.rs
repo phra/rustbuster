@@ -1,23 +1,22 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Result;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SingleScanResult {
-    pub url: hyper::Uri,
-    pub method: hyper::Method,
-    pub status: hyper::StatusCode,
+    pub url: String,
+    pub method: String,
+    pub status: String,
     pub error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResultProcessorConfig {
-    pub include: Vec<hyper::StatusCode>,
-    pub ignore: Vec<hyper::StatusCode>
+    pub include: Vec<String>,
+    pub ignore: Vec<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ScanResult {
-    results: Vec<SingleScanResult>,
+    pub results: Vec<SingleScanResult>,
     config: ResultProcessorConfig,
 }
 

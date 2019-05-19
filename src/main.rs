@@ -8,7 +8,7 @@ use std::{sync::mpsc::channel, thread, str::FromStr};
 mod dirbuster;
 
 use dirbuster::{
-    utils::{Config, load_wordlist_and_build_urls},
+    utils::{Config, load_wordlist_and_build_urls, save_results},
     result_processor::{SingleScanResult, ScanResult, ResultProcessorConfig}
 };
 
@@ -85,6 +85,13 @@ fn main() {
                 .default_value("404")
                 .use_delimiter(true)
         )
+        .arg(
+            Arg::with_name("output")
+                .help("Save the results in the specified file")
+                .short("o")
+                .default_value("")
+                .takes_value(true)
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
@@ -113,8 +120,8 @@ fn main() {
             }
             valid
         })
-        .map(|s| hyper::StatusCode::from_str(s).unwrap())
-        .collect::<Vec<hyper::StatusCode>>();
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     let ignore_status_codes = matches
         .values_of("ignore-status-codes")
         .unwrap()
@@ -126,8 +133,9 @@ fn main() {
             }
             valid
         })
-        .map(|s| hyper::StatusCode::from_str(s).unwrap())
-        .collect::<Vec<hyper::StatusCode>>();
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+    let output = matches.value_of("output").unwrap();
 
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
@@ -194,6 +202,10 @@ fn main() {
                 }
 
                 result_processor.maybe_add_result(msg);
+            }
+
+            if !output.is_empty() {
+                save_results(output, &result_processor.results);
             }
         }
         _ => (),

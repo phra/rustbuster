@@ -1,4 +1,6 @@
-use std::{fs, str};
+use std::{fs, str, fs::File, io::Write, path::Path};
+
+use super::result_processor::SingleScanResult;
 
 #[derive(Debug)]
 pub struct Config {
@@ -49,4 +51,27 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
     }
 
     urls
+}
+
+pub fn save_results(path: &str, results: &Vec<SingleScanResult>) {
+    let json_string = serde_json::to_string(&results).unwrap();
+
+    let mut file = match File::create(Path::new(path)) {
+        Ok(f) => f,
+        Err(e) => {
+            error!(
+                "Error while creating file: {}\n{}",
+                path, e
+            );
+            return;
+        }
+    };
+
+    match file.write_all(json_string.as_bytes()) {
+        Ok(_) => debug!("Results saved to: {}", path),
+        Err(e) => error!(
+            "Error while writing results to file: {}\n{}",
+            path, e
+        )
+    };
 }
