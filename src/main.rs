@@ -21,16 +21,19 @@ fn main() {
         .about("DirBuster for rust")
         .arg(
             Arg::with_name("verbose")
+                .long("verbose")
                 .short("v")
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )
         .arg(
             Arg::with_name("no-banner")
+                .long("no-banner")
                 .help("Skips initial banner"),
         )
         .arg(
             Arg::with_name("url")
+                .long("url")
                 .help("Sets the target URL")
                 .short("u")
                 .takes_value(true)
@@ -38,6 +41,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("wordlist")
+                .long("wordlist")
                 .help("Sets the wordlist")
                 .short("w")
                 .takes_value(true)
@@ -45,6 +49,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("extensions")
+                .long("extensions")
                 .help("Sets the extensions")
                 .short("e")
                 .default_value("")
@@ -52,6 +57,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("mode")
+                .long("mode")
                 .help("Sets the mode of operation (dir, dns, fuzz)")
                 .short("m")
                 .takes_value(true)
@@ -59,6 +65,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("threads")
+                .long("threads")
                 .alias("workers")
                 .help("Sets the amount of concurrent requests")
                 .short("t")
@@ -67,17 +74,20 @@ fn main() {
         )
         .arg(
             Arg::with_name("ignore-certificate")
+                .long("ignore-certificate")
                 .alias("no-check-certificate")
                 .help("Disables TLS certificate validation")
                 .short("k"),
         )
         .arg(
             Arg::with_name("exit-on-error")
+                .long("exit-on-error")
                 .help("Exits on connection errors")
                 .short("K"),
         )
         .arg(
             Arg::with_name("include-status-codes")
+                .long("include-status-codes")
                 .help("Sets the list of status codes (comma-separated) to include in the results (default: all but the ignored ones)")
                 .short("s")
                 .default_value("")
@@ -85,6 +95,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("ignore-status-codes")
+                .long("ignore-status-codes")
                 .help("Sets the list of status codes (comma-separated) to ignore from the results (default: 404)")
                 .short("S")
                 .default_value("404")
@@ -92,6 +103,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("output")
+                .long("output")
                 .help("Save the results in the specified file")
                 .short("o")
                 .default_value("")
