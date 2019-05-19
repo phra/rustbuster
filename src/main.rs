@@ -5,6 +5,7 @@ use clap::{App, Arg};
 
 use std::{sync::mpsc::channel, thread, str::FromStr};
 
+mod banner;
 mod dirbuster;
 
 use dirbuster::{
@@ -23,6 +24,10 @@ fn main() {
                 .short("v")
                 .multiple(true)
                 .help("Sets the level of verbosity"),
+        )
+        .arg(
+            Arg::with_name("no-banner")
+                .help("Skips initial banner"),
         )
         .arg(
             Arg::with_name("url")
@@ -94,6 +99,10 @@ fn main() {
         )
         .get_matches();
 
+    if !matches.is_present("no-banner") {
+        println!("{}{}", banner::generate(), "");
+    }
+
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
@@ -136,6 +145,14 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
     let output = matches.value_of("output").unwrap();
+
+    match url.parse::<hyper::Uri>() {
+        Err(e) => {
+            error!("Invalid URL: {}", e);
+            return;
+        },
+        Ok(_) => (),
+    }
 
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
