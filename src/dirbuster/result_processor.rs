@@ -12,12 +12,14 @@ pub struct ResultProcessorConfig {
 
 pub struct ScanResult {
     results: Vec<SingleScanResult>,
+    config: ResultProcessorConfig,
 }
 
 impl ScanResult {
-    pub fn new(results: Vec<SingleScanResult>) -> Self {
+    pub fn new(config: ResultProcessorConfig) -> Self {
         ScanResult {
-            results,
+            results: Vec::<SingleScanResult>::new(),
+            config,
         }
     }
 
