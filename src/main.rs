@@ -3,11 +3,14 @@ extern crate log;
 
 use clap::{App, Arg};
 
-use std::{sync::mpsc::channel, thread};
+use std::{sync::mpsc::channel, thread, str::FromStr};
 
 mod dirbuster;
 
-use dirbuster::{utils::{Config, load_wordlist_and_build_urls}, result_processor::{SingleScanResult}};
+use dirbuster::{
+    utils::{Config, load_wordlist_and_build_urls},
+    result_processor::{SingleScanResult, ScanResult, ResultProcessorConfig}
+};
 
 fn main() {
     pretty_env_logger::init();
@@ -68,6 +71,20 @@ fn main() {
                 .help("Exits on connection errors")
                 .short("K"),
         )
+        .arg(
+            Arg::with_name("include-status-codes")
+                .help("Sets the list of status codes (comma-separated) to include in the results (default: all but the ignored ones)")
+                .short("s")
+                .default_value("")
+                .use_delimiter(true)
+        )
+        .arg(
+            Arg::with_name("ignore-status-codes")
+                .help("Sets the list of status codes (comma-separated) to ignore from the results (default: 404)")
+                .short("S")
+                .default_value("404")
+                .use_delimiter(true)
+        )
         .get_matches();
 
     let url = matches.value_of("url").unwrap();
@@ -83,8 +100,34 @@ fn main() {
     let extensions = matches
         .values_of("extensions")
         .unwrap()
-        .filter(|e| e.len() != 0)
+        .filter(|e| !e.is_empty())
         .collect::<Vec<&str>>();
+    let include_status_codes = matches
+        .values_of("include-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() { return false }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                error!("Ignoring invalid status code for '-s' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| hyper::StatusCode::from_str(s).unwrap())
+        .collect::<Vec<hyper::StatusCode>>();
+    let ignore_status_codes = matches
+        .values_of("ignore-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() { return false }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                error!("Ignoring invalid status code for '-S' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| hyper::StatusCode::from_str(s).unwrap())
+        .collect::<Vec<hyper::StatusCode>>();
 
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
@@ -97,6 +140,15 @@ fn main() {
         "Using exit on connection errors: {:?}",
         exit_on_connection_errors
     );
+    debug!(
+        "Including status codes: {}",
+        if include_status_codes.is_empty() {
+            String::from("ALL")
+        } else {
+            format!("{:?}", include_status_codes)
+        }
+    );
+    debug!("Excluding status codes: {:?}", ignore_status_codes);
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -112,15 +164,19 @@ fn main() {
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             let numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleScanResult>();
-            let mut results: Vec<SingleScanResult> = Vec::new();
             let config = Config {
                 n_threads,
                 ignore_certificate,
             };
+            let rp_config = ResultProcessorConfig {
+                include: include_status_codes,
+                ignore: ignore_status_codes
+            };
+            let mut result_processor = ScanResult::new(rp_config);
 
             thread::spawn(move || dirbuster::run(tx, urls, &config));
 
-            while results.len() != numbers_of_request {
+            while result_processor.count() != numbers_of_request {
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
                     Err(_err) => { error!("{:?}", _err); continue },
@@ -129,7 +185,7 @@ fn main() {
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if results.len() == 0 || exit_on_connection_errors {
+                        if result_processor.count() == 0 || exit_on_connection_errors {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -137,7 +193,7 @@ fn main() {
                     None => (),
                 }
 
-                results.push(msg);
+                result_processor.maybe_add_result(msg);
             }
         }
         _ => (),

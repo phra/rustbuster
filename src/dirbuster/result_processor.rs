@@ -7,6 +7,7 @@ pub struct SingleScanResult {
 }
 
 pub struct ResultProcessorConfig {
+    pub include: Vec<hyper::StatusCode>,
     pub ignore: Vec<hyper::StatusCode>
 }
 
@@ -23,11 +24,15 @@ impl ScanResult {
         }
     }
 
-    pub fn add_result(&mut self, res: SingleScanResult) {
-        self.results.push(res)
+    pub fn maybe_add_result(&mut self, res: SingleScanResult) {
+        if !self.config.ignore.contains(&res.status)
+        && (self.config.include.is_empty()
+        || self.config.include.contains(&res.status)) {
+            self.results.push(res);
+        }
     }
 
-    pub fn count(self) -> usize {
+    pub fn count(&self) -> usize {
         self.results.len()
     }
 }
