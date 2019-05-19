@@ -9,16 +9,19 @@ use native_tls;
 use std::sync::mpsc::Sender;
 
 pub mod utils;
+pub mod result_processor;
+
+use result_processor::SingleScanResult;
 
 use utils::*;
 
 fn _fetch_url(
-    tx: Sender<utils::Target>,
+    tx: Sender<SingleScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
-    let mut target = Target {
+    let mut target = SingleScanResult {
         url: url.clone(),
         method: Method::GET,
         status: StatusCode::default(),
@@ -42,7 +45,7 @@ fn _fetch_url(
         })
 }
 
-pub fn run(tx: Sender<Target>, urls: Vec<hyper::Uri>, config: &Config) {
+pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: &Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
     tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
     let tls_connector = tls_connector_builder
