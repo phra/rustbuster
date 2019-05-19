@@ -12,7 +12,6 @@ pub mod utils;
 pub mod result_processor;
 
 use result_processor::SingleScanResult;
-
 use utils::*;
 
 fn _fetch_url(
