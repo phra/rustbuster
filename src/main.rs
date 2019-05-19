@@ -5,7 +5,9 @@ use clap::{App, Arg};
 
 use std::{fs, str, sync::mpsc::channel, thread};
 
-mod fetcher;
+mod dirbuster;
+
+use dirbuster::{utils::{Target, Config}};
 
 fn main() {
     pretty_env_logger::init();
@@ -109,19 +111,19 @@ fn main() {
         "dir" => {
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
             let numbers_of_request = urls.len();
-            let (tx, rx) = channel();
-            let mut results: Vec<fetcher::Target> = Vec::new();
-            let config = fetcher::Config {
+            let (tx, rx) = channel::<Target>();
+            let mut results: Vec<Target> = Vec::new();
+            let config = Config {
                 n_threads,
                 ignore_certificate,
             };
 
-            thread::spawn(move || fetcher::_run(tx, urls, &config));
+            thread::spawn(move || dirbuster::run(tx, urls, &config));
 
             while results.len() != numbers_of_request {
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
-                    Err(_err) => continue,
+                    Err(_err) => { error!("{:?}", _err); continue },
                 };
 
                 match &msg.error {

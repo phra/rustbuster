@@ -8,22 +8,12 @@ use hyper_tls::{self, HttpsConnector};
 use native_tls;
 use std::sync::mpsc::Sender;
 
-#[derive(Debug, Clone)]
-pub struct Target {
-    url: Uri,
-    method: Method,
-    status: StatusCode,
-    pub error: Option<String>,
-}
+pub mod utils;
 
-#[derive(Debug)]
-pub struct Config {
-    pub n_threads: usize,
-    pub ignore_certificate: bool,
-}
+use utils::*;
 
 fn _fetch_url(
-    tx: Sender<Target>,
+    tx: Sender<utils::Target>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
 ) -> impl Future<Item = (), Error = ()> {
@@ -52,7 +42,7 @@ fn _fetch_url(
         })
 }
 
-pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, config: &Config) {
+pub fn run(tx: Sender<Target>, urls: Vec<hyper::Uri>, config: &Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
     tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
     let tls_connector = tls_connector_builder
