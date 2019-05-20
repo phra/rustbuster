@@ -61,6 +61,17 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
         }
 
         for extension in extensions.iter() {
+            if append_slash {
+                match format!("{}.{}/", url, extension).parse::<hyper::Uri>() {
+                    Ok(v) => {
+                        urls.push(v);
+                    }
+                    Err(e) => {
+                        debug!("URI: {}", e);
+                    }
+                }
+            }
+
             match format!("{}.{}", url, extension).parse::<hyper::Uri>() {
                 Ok(v) => {
                     urls.push(v);
