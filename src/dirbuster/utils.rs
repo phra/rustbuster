@@ -16,16 +16,17 @@ pub fn load_wordlist_and_build_urls(
     wordlist_path: &str,
     url: &str,
     extensions: Vec<&str>,
+    append_slash: bool,
 ) -> Vec<hyper::Uri> {
     debug!("loading wordlist");
     let contents =
         fs::read_to_string(wordlist_path).expect("Something went wrong reading the file");
 
     let splitted_lines = contents.lines();
-    build_urls(splitted_lines, url, extensions)
+    build_urls(splitted_lines, url, extensions, append_slash)
 }
 
-fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> Vec<hyper::Uri> {
+fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, append_slash: bool) -> Vec<hyper::Uri> {
     debug!("building urls");
     let mut urls: Vec<hyper::Uri> = Vec::new();
     let urls_iter = splitted_lines
@@ -39,6 +40,17 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
         });
 
     for url in urls_iter {
+        if append_slash {
+            match format!("{}/", url).parse::<hyper::Uri>() {
+                Ok(v) => {
+                    urls.push(v);
+                }
+                Err(e) => {
+                    debug!("URI: {}", e);
+                }
+            }
+        }
+
         match url.parse::<hyper::Uri>() {
             Ok(v) => {
                 urls.push(v);

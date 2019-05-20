@@ -149,8 +149,15 @@ fn main() {
                 .default_value("rustbuster")
                 .takes_value(true)
         )
+        .arg(
+            Arg::with_name("append-slash")
+                .long("append-slash")
+                .help("Tries to also append / to the base request")
+                .short("f")
+        )
         .get_matches();
 
+    let append_slash = matches.is_present("append-slash");
     let user_agent = matches.value_of("user-agent").unwrap();
     let http_method = matches.value_of("http-method").unwrap();
     let http_body = matches.value_of("http-body").unwrap();
@@ -262,7 +269,7 @@ fn main() {
 
     match mode {
         "dir" => {
-            let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
+            let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions, append_slash);
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleScanResult>();
             let config = Config {
