@@ -3,15 +3,15 @@ extern crate log;
 
 use clap::{App, Arg};
 
-use std::{sync::mpsc::channel, thread, str::FromStr};
 use std::time::{Duration, SystemTime};
+use std::{str::FromStr, sync::mpsc::channel, thread};
 
 mod banner;
 mod dirbuster;
 
 use dirbuster::{
-    utils::{Config, load_wordlist_and_build_urls, save_results},
-    result_processor::{SingleScanResult, ScanResult, ResultProcessorConfig}
+    result_processor::{ResultProcessorConfig, ScanResult, SingleScanResult},
+    utils::{load_wordlist_and_build_urls, save_results, Config},
 };
 
 use indicatif::{ProgressBar, ProgressStyle};
@@ -133,7 +133,9 @@ fn main() {
         .values_of("include-status-codes")
         .unwrap()
         .filter(|s| {
-            if s.is_empty() { return false }
+            if s.is_empty() {
+                return false;
+            }
             let valid = hyper::StatusCode::from_str(s).is_ok();
             if !valid {
                 error!("Ignoring invalid status code for '-s' param: {}", s);
@@ -146,7 +148,9 @@ fn main() {
         .values_of("ignore-status-codes")
         .unwrap()
         .filter(|s| {
-            if s.is_empty() { return false }
+            if s.is_empty() {
+                return false;
+            }
             let valid = hyper::StatusCode::from_str(s).is_ok();
             if !valid {
                 error!("Ignoring invalid status code for '-S' param: {}", s);
@@ -161,7 +165,7 @@ fn main() {
         Err(e) => {
             error!("Invalid URL: {}", e);
             return;
-        },
+        }
         Ok(_) => (),
     }
 
@@ -197,7 +201,15 @@ fn main() {
 
     if !matches.is_present("no-banner") {
         println!("{}", banner::generate());
-        println!("{}", banner::configuration(mode, url, matches.value_of("threads").unwrap(), wordlist_path))
+        println!(
+            "{}",
+            banner::configuration(
+                mode,
+                url,
+                matches.value_of("threads").unwrap(),
+                wordlist_path
+            )
+        )
     }
 
     match mode {
@@ -211,7 +223,7 @@ fn main() {
             };
             let rp_config = ResultProcessorConfig {
                 include: include_status_codes,
-                ignore: ignore_status_codes
+                ignore: ignore_status_codes,
             };
             let mut result_processor = ScanResult::new(rp_config);
             let mut current_numbers_of_request = 0;
@@ -229,14 +241,20 @@ fn main() {
                 bar.inc(1);
                 let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
                 if seconds_from_start != 0 {
-                    bar.set_message(&(current_numbers_of_request as u64 / seconds_from_start as u64).to_string());
+                    bar.set_message(
+                        &(current_numbers_of_request as u64 / seconds_from_start as u64)
+                            .to_string(),
+                    );
                 } else {
                     bar.set_message("warming up...")
                 }
 
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
-                    Err(_err) => { error!("{:?}", _err); break },
+                    Err(_err) => {
+                        error!("{:?}", _err);
+                        break;
+                    }
                 };
 
                 match &msg.error {

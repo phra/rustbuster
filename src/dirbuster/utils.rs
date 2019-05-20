@@ -1,4 +1,4 @@
-use std::{fs, str, fs::File, io::Write, path::Path};
+use std::{fs, fs::File, io::Write, path::Path, str};
 
 use super::result_processor::SingleScanResult;
 
@@ -65,19 +65,13 @@ pub fn save_results(path: &str, results: &Vec<SingleScanResult>) {
     let mut file = match File::create(Path::new(path)) {
         Ok(f) => f,
         Err(e) => {
-            error!(
-                "Error while creating file: {}\n{}",
-                path, e
-            );
+            error!("Error while creating file: {}\n{}", path, e);
             return;
         }
     };
 
     match file.write_all(json_string.as_bytes()) {
         Ok(_) => debug!("Results saved to: {}", path),
-        Err(e) => error!(
-            "Error while writing results to file: {}\n{}",
-            path, e
-        )
+        Err(e) => error!("Error while writing results to file: {}\n{}", path, e),
     };
 }

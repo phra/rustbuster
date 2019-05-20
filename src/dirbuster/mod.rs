@@ -8,8 +8,8 @@ use hyper_tls::{self, HttpsConnector};
 use native_tls;
 use std::sync::mpsc::Sender;
 
-pub mod utils;
 pub mod result_processor;
+pub mod utils;
 
 use result_processor::SingleScanResult;
 use utils::*;

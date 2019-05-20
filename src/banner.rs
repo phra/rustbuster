@@ -18,11 +18,14 @@ pub fn generate() -> String {
 }
 
 pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> String {
-    format!("[+] Mode         : {}
+    format!(
+        "[+] Mode         : {}
 [+] Url/Domain   : {}
 [+] Threads      : {}
 [+] Wordlist     : {}
-", mode, url, threads, wordlist)
+",
+        mode, url, threads, wordlist
+    )
 }
 
 pub fn starting_time() {}

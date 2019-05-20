@@ -11,7 +11,7 @@ pub struct SingleScanResult {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResultProcessorConfig {
     pub include: Vec<String>,
-    pub ignore: Vec<String>
+    pub ignore: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -46,9 +46,7 @@ impl ScanResult {
             }
         }
 
-        if !ignore
-        && (self.config.include.is_empty()
-        || include) {
+        if !ignore && (self.config.include.is_empty() || include) {
             print_result_stdout(&res);
             self.results.push(res);
             return true;
