@@ -22,25 +22,28 @@ USAGE:
     rustbuster [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>
 
 FLAGS:
+    -f, --append-slash          Tries to also append / to the base request
     -K, --exit-on-error         Exits on connection errors
     -h, --help                  Prints help information
     -k, --ignore-certificate    Disables TLS certificate validation
         --no-banner             Skips initial banner
+        --no-progress-bar       Disables the progress bar
     -V, --version               Prints version information
     -v, --verbose               Sets the level of verbosity
 
 OPTIONS:
     -e, --extensions <extensions>                        Sets the extensions [default: ]
-    -S, --ignore-status-codes <ignore-status-codes>
-            Sets the list of status codes (comma-separated) to ignore from the results (default: 404) [default: 404]
-
-    -s, --include-status-codes <include-status-codes>
-            Sets the list of status codes (comma-separated) to include in the results (default: all but the ignored
-            ones) [default: ]
+    -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
+    -H, --http-header <http-header>...                   Appends the specified HTTP header
+    -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
+    -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
+    -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
     -m, --mode <mode>                                    Sets the mode of operation (dir, dns, fuzz) [default: dir]
-    -o, --output <output>                                Save the results in the specified file [default: ]
+    -o, --output <output>                                Saves the results in the specified file [default: ]
     -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
     -u, --url <url>                                      Sets the target URL
+    -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
     -w, --wordlist <wordlist>                            Sets the wordlist
+
 
 ```
