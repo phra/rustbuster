@@ -26,7 +26,13 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
     let mut urls: Vec<hyper::Uri> = Vec::new();
     let urls_iter = splitted_lines
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| format!("{}{}", url, word));
+        .map(|word| {
+            if url.ends_with("/") {
+                format!("{}{}", url, word)
+            } else {
+                format!("{}/{}", url, word)
+            }
+        });
 
     for url in urls_iter {
         match url.parse::<hyper::Uri>() {
