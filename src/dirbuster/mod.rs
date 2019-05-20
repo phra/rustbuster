@@ -2,7 +2,7 @@ use futures::Stream;
 use hyper::{
     client::HttpConnector,
     rt::{self, Future},
-    Client, Method, StatusCode, Uri,
+    Body, Client, Method, Request, StatusCode, Uri,
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
@@ -14,10 +14,11 @@ pub mod utils;
 use result_processor::SingleScanResult;
 use utils::*;
 
-fn _fetch_url(
+fn make_request_future(
     tx: Sender<SingleScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
+    config: Config,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
     let mut target = SingleScanResult {
@@ -27,14 +28,23 @@ fn _fetch_url(
         error: None,
     };
     let mut target_err = target.clone();
+    let mut request_builder = Request::builder();
+
+    for header_tuple in config.http_headers {
+        request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
+    }
+
+    let request = request_builder.header("User-Agent", config.user_agent)
+        .method(&config.http_method[..])
+        .uri(url)
+        .body(Body::from(config.http_body.clone()))
+        .expect("Request builder");
 
     client
-        .get(url)
+        .request(request)
         .and_then(move |res| {
             target.status = res.status().to_string();
-
             tx.send(target).unwrap();
-
             Ok(())
         })
         .or_else(move |e| {
@@ -44,7 +54,7 @@ fn _fetch_url(
         })
 }
 
-pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: &Config) {
+pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
     tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
     let tls_connector = tls_connector_builder
@@ -54,10 +64,11 @@ pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: &Config)
     http_connector.enforce_http(false);
     let https_connector = HttpsConnector::from((http_connector, tls_connector));
     let client = Client::builder().build(https_connector);
+    let n_threads = config.n_threads;
 
     let stream = futures::stream::iter_ok(urls)
-        .map(move |url| _fetch_url(tx.clone(), &client, url))
-        .buffer_unordered(config.n_threads)
+        .map(move |url| make_request_future(tx.clone(), &client, url, config.clone()))
+        .buffer_unordered(n_threads)
         .for_each(Ok)
         .map_err(|err| eprintln!("Err {:?}", err));
 
