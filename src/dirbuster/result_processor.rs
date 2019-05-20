@@ -29,9 +29,26 @@ impl ScanResult {
     }
 
     pub fn maybe_add_result(&mut self, res: SingleScanResult) {
-        if !self.config.ignore.contains(&res.status)
+        debug!("{:?}", res);
+        let mut ignore = false;
+        let mut include = false;
+        for code in self.config.ignore.iter() {
+            if res.status.starts_with(code) {
+                ignore = true;
+                break;
+            }
+        }
+
+        for code in self.config.include.iter() {
+            if res.status.starts_with(code) {
+                include = true;
+                break;
+            }
+        }
+
+        if !ignore
         && (self.config.include.is_empty()
-        || self.config.include.contains(&res.status)) {
+        || include) {
             self.results.push(res);
         }
     }
