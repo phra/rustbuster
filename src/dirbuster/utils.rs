@@ -41,12 +41,14 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
 
     for url in urls_iter {
         if append_slash {
-            match format!("{}/", url).parse::<hyper::Uri>() {
-                Ok(v) => {
-                    urls.push(v);
-                }
-                Err(e) => {
-                    trace!("URI: {}", e);
+            if !url.ends_with("/") {
+                match format!("{}/", url).parse::<hyper::Uri>() {
+                    Ok(v) => {
+                        urls.push(v);
+                    }
+                    Err(e) => {
+                        trace!("URI: {}", e);
+                    }
                 }
             }
         }
