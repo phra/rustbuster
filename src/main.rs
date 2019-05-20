@@ -199,7 +199,7 @@ fn main() {
     match mode {
         "dir" => {
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
-            let numbers_of_request = urls.len();
+            let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleScanResult>();
             let config = Config {
                 n_threads,
@@ -210,13 +210,15 @@ fn main() {
                 ignore: ignore_status_codes
             };
             let mut result_processor = ScanResult::new(rp_config);
+            let mut current_numbers_of_request = 0;
 
             thread::spawn(move || dirbuster::run(tx, urls, &config));
 
-            while result_processor.count() != numbers_of_request {
+            while current_numbers_of_request != total_numbers_of_request {
+                current_numbers_of_request = current_numbers_of_request + 1;
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
-                    Err(_err) => { error!("{:?}", _err); continue },
+                    Err(_err) => { error!("{:?}", _err); break },
                 };
 
                 match &msg.error {
