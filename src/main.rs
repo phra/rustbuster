@@ -2,19 +2,22 @@
 extern crate log;
 
 use clap::{App, Arg};
+use indicatif::{ProgressBar, ProgressStyle};
 
-use std::time::SystemTime;
-use std::{str::FromStr, sync::mpsc::channel, thread};
+use std::{
+    str::FromStr, sync::mpsc::channel,
+    time::SystemTime, thread
+};
 
 mod banner;
 mod dirbuster;
+mod dnsbuster;
 
 use dirbuster::{
-    result_processor::{ResultProcessorConfig, ScanResult, SingleScanResult},
+    result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
     utils::*,
 };
-
-use indicatif::{ProgressBar, ProgressStyle};
+use dnsbuster::SingleDnsScanResult;
 
 fn main() {
     pretty_env_logger::init();
@@ -267,11 +270,14 @@ fn main() {
         println!("{}", banner::starting_time());
     }
 
+    let mut current_numbers_of_request = 0;
+    let start_time = SystemTime::now();
+
     match mode {
         "dir" => {
-            let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions, append_slash);
+            let urls = build_urls(wordlist_path, url, extensions, append_slash);
             let total_numbers_of_request = urls.len();
-            let (tx, rx) = channel::<SingleScanResult>();
+            let (tx, rx) = channel::<SingleDirScanResult>();
             let config = Config {
                 n_threads,
                 ignore_certificate,
@@ -285,13 +291,11 @@ fn main() {
                 ignore: ignore_status_codes,
             };
             let mut result_processor = ScanResult::new(rp_config);
-            let mut current_numbers_of_request = 0;
-            let start_time = SystemTime::now();
             let bar = if no_progress_bar {
                 ProgressBar::hidden()
             } else {
                 ProgressBar::new(total_numbers_of_request as u64)
-            }; // XXX: won't work on i386
+            };
             bar.set_draw_delta(100);
             bar.set_style(ProgressStyle::default_bar()
                 .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
@@ -358,6 +362,39 @@ fn main() {
 
             if !output.is_empty() {
                 save_results(output, &result_processor.results);
+            }
+        }
+        "dns" => {
+            let domains = build_domains(wordlist_path, url);
+            let total_numbers_of_request = domains.len();
+            let (tx, rx) = channel::<SingleDnsScanResult>();
+            let config = dnsbuster::Config { n_threads };
+
+            let bar = if no_progress_bar {
+                ProgressBar::hidden()
+            } else {
+                ProgressBar::new(total_numbers_of_request as u64)
+            };
+            bar.set_draw_delta(100);
+            bar.set_style(ProgressStyle::default_bar()
+                .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
+                .progress_chars("#>-"));
+            
+            thread::spawn(move || dnsbuster::run(tx, domains, config));
+
+            while current_numbers_of_request != total_numbers_of_request {
+                current_numbers_of_request = current_numbers_of_request + 1;
+                bar.inc(1);
+
+                let msg = match rx.recv() {
+                    Ok(msg) => msg,
+                    Err(_err) => {
+                        error!("{:?}", _err);
+                        break;
+                    }
+                };
+
+                println!("msg: {:?}", msg);
             }
         }
         _ => (),

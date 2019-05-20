@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SingleScanResult {
+pub struct SingleDirScanResult {
     pub url: String,
     pub method: String,
     pub status: String,
@@ -17,19 +17,19 @@ pub struct ResultProcessorConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ScanResult {
-    pub results: Vec<SingleScanResult>,
+    pub results: Vec<SingleDirScanResult>,
     config: ResultProcessorConfig,
 }
 
 impl ScanResult {
     pub fn new(config: ResultProcessorConfig) -> Self {
         ScanResult {
-            results: Vec::<SingleScanResult>::new(),
+            results: Vec::<SingleDirScanResult>::new(),
             config,
         }
     }
 
-    pub fn maybe_add_result(&mut self, res: SingleScanResult) -> bool {
+    pub fn maybe_add_result(&mut self, res: SingleDirScanResult) -> bool {
         trace!("{:?}", res);
         let mut ignore = false;
         let mut include = false;
