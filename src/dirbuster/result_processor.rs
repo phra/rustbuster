@@ -28,7 +28,7 @@ impl ScanResult {
         }
     }
 
-    pub fn maybe_add_result(&mut self, res: SingleScanResult) {
+    pub fn maybe_add_result(&mut self, res: SingleScanResult) -> bool {
         debug!("{:?}", res);
         let mut ignore = false;
         let mut include = false;
@@ -51,7 +51,10 @@ impl ScanResult {
         || include) {
             print_result_stdout(&res);
             self.results.push(res);
+            return true;
         }
+
+        false
     }
 
     pub fn count(&self) -> usize {

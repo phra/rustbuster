@@ -4,6 +4,7 @@ extern crate log;
 use clap::{App, Arg};
 
 use std::{sync::mpsc::channel, thread, str::FromStr};
+use std::time::{Duration, SystemTime};
 
 mod banner;
 mod dirbuster;
@@ -12,6 +13,8 @@ use dirbuster::{
     utils::{Config, load_wordlist_and_build_urls, save_results},
     result_processor::{SingleScanResult, ScanResult, ResultProcessorConfig}
 };
+
+use indicatif::{ProgressBar, ProgressStyle};
 
 fn main() {
     pretty_env_logger::init();
@@ -212,11 +215,25 @@ fn main() {
             };
             let mut result_processor = ScanResult::new(rp_config);
             let mut current_numbers_of_request = 0;
+            let start_time = SystemTime::now();
+            let bar = ProgressBar::new(total_numbers_of_request as u64); // XXX: won't work on i386
+            bar.set_draw_delta(100);
+            bar.set_style(ProgressStyle::default_bar()
+                .template("{spinner} [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} Elapsed: {elapsed_precise} ETA: {eta_precise} #request/seconds: {msg}")
+                .progress_chars("#>-"));
 
             thread::spawn(move || dirbuster::run(tx, urls, &config));
 
             while current_numbers_of_request != total_numbers_of_request {
                 current_numbers_of_request = current_numbers_of_request + 1;
+                bar.inc(1);
+                let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
+                if seconds_from_start != 0 {
+                    bar.set_message(&(current_numbers_of_request as u64 / seconds_from_start as u64).to_string());
+                } else {
+                    bar.set_message("warming up...")
+                }
+
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
                     Err(_err) => { error!("{:?}", _err); break },
@@ -233,8 +250,13 @@ fn main() {
                     None => (),
                 }
 
-                result_processor.maybe_add_result(msg);
+                let was_added = result_processor.maybe_add_result(msg.clone());
+                if was_added {
+                    println!("\r{} {} {}", msg.method, msg.status, msg.url);
+                }
             }
+
+            bar.finish();
 
             if !output.is_empty() {
                 save_results(output, &result_processor.results);
