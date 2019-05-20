@@ -334,11 +334,20 @@ fn main() {
                 let was_added = result_processor.maybe_add_result(msg.clone());
                 if was_added {
                     let mut extra = msg.extra.unwrap_or("".to_owned());
+
                     if !extra.is_empty() {
-                        extra = format!("\n\t\t\t\t\t=> {}", extra)
+                        extra = format!("\n\t\t\t\t\t\t=> {}", extra)
                     }
 
-                    bar.println(format!("{} {}\t\t\t{}{}", msg.method, msg.status, msg.url, extra));
+                    let n_tabs = match msg.status.len() / 8 {
+                        3 => 1,
+                        2 => 2,
+                        1 => 3,
+                        0 => 4,
+                        _ => 0,
+                    };
+
+                    bar.println(format!("{}\t{}{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.url, extra));
                 }
             }
 
