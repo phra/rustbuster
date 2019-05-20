@@ -24,18 +24,20 @@ fn make_request_future(
         status: false
     };
 
-    match result.domain.to_socket_addrs() {
-        Ok(_) => {
-            result.status = true;
-            tx.send(result).unwrap();
-        }
-        Err(e) => {
-            println!("err {}", e);
-            tx.send(result).unwrap();
-        }
-    };
-
-    future::ok(())
+    future::lazy(move || {
+        match result.domain.to_socket_addrs() {
+            Ok(v) => {
+                result.status = true;
+                tx.send(result).unwrap();
+                Ok(v);
+            }
+            Err(e) => {
+                println!("err {}", e);
+                tx.send(result).unwrap();
+                Err(e);
+            }
+        };
+    })
 }
 
 pub fn run(tx: Sender<SingleDnsScanResult>, domains: Vec<String>, config: Config) {
