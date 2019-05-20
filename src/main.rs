@@ -112,7 +112,7 @@ fn main() {
         .get_matches();
 
     if !matches.is_present("no-banner") {
-        println!("{}{}", banner::generate(), "");
+        println!("{}", banner::generate());
     }
 
     let url = matches.value_of("url").unwrap();
