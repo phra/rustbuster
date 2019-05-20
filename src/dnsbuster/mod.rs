@@ -29,14 +29,14 @@ fn make_request_future(
             Ok(v) => {
                 result.status = true;
                 tx.send(result).unwrap();
-                Ok(v);
             }
             Err(e) => {
                 println!("err {}", e);
                 tx.send(result).unwrap();
-                Err(e);
             }
         };
+
+        future::lazy(|| Ok(()))
     })
 }
 
