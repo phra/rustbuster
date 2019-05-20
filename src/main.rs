@@ -333,7 +333,7 @@ fn main() {
 
                 let was_added = result_processor.maybe_add_result(msg.clone());
                 if was_added {
-                    bar.println(format!("{} {}\t{}", msg.method, msg.status, msg.url));
+                    bar.println(format!("{} {}\t\t\t{}", msg.method, msg.status, msg.url));
                 }
             }
 
