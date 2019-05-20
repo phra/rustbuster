@@ -3,9 +3,18 @@ extern crate log;
 
 use clap::{App, Arg};
 
-use std::{fs, str, sync::mpsc::channel, thread};
+use std::{sync::mpsc::channel, thread, str::FromStr};
+use std::time::{Duration, SystemTime};
 
-mod fetcher;
+mod banner;
+mod dirbuster;
+
+use dirbuster::{
+    utils::{Config, load_wordlist_and_build_urls, save_results},
+    result_processor::{SingleScanResult, ScanResult, ResultProcessorConfig}
+};
+
+use indicatif::{ProgressBar, ProgressStyle};
 
 fn main() {
     pretty_env_logger::init();
@@ -15,12 +24,19 @@ fn main() {
         .about("DirBuster for rust")
         .arg(
             Arg::with_name("verbose")
+                .long("verbose")
                 .short("v")
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )
         .arg(
+            Arg::with_name("no-banner")
+                .long("no-banner")
+                .help("Skips initial banner"),
+        )
+        .arg(
             Arg::with_name("url")
+                .long("url")
                 .help("Sets the target URL")
                 .short("u")
                 .takes_value(true)
@@ -28,6 +44,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("wordlist")
+                .long("wordlist")
                 .help("Sets the wordlist")
                 .short("w")
                 .takes_value(true)
@@ -35,6 +52,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("extensions")
+                .long("extensions")
                 .help("Sets the extensions")
                 .short("e")
                 .default_value("")
@@ -42,6 +60,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("mode")
+                .long("mode")
                 .help("Sets the mode of operation (dir, dns, fuzz)")
                 .short("m")
                 .takes_value(true)
@@ -49,6 +68,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("threads")
+                .long("threads")
                 .alias("workers")
                 .help("Sets the amount of concurrent requests")
                 .short("t")
@@ -57,14 +77,40 @@ fn main() {
         )
         .arg(
             Arg::with_name("ignore-certificate")
+                .long("ignore-certificate")
                 .alias("no-check-certificate")
                 .help("Disables TLS certificate validation")
                 .short("k"),
         )
         .arg(
             Arg::with_name("exit-on-error")
+                .long("exit-on-error")
                 .help("Exits on connection errors")
                 .short("K"),
+        )
+        .arg(
+            Arg::with_name("include-status-codes")
+                .long("include-status-codes")
+                .help("Sets the list of status codes (comma-separated) to include in the results (default: all but the ignored ones)")
+                .short("s")
+                .default_value("")
+                .use_delimiter(true)
+        )
+        .arg(
+            Arg::with_name("ignore-status-codes")
+                .long("ignore-status-codes")
+                .help("Sets the list of status codes (comma-separated) to ignore from the results (default: 404)")
+                .short("S")
+                .default_value("404")
+                .use_delimiter(true)
+        )
+        .arg(
+            Arg::with_name("output")
+                .long("output")
+                .help("Save the results in the specified file")
+                .short("o")
+                .default_value("")
+                .takes_value(true)
         )
         .get_matches();
 
@@ -81,8 +127,43 @@ fn main() {
     let extensions = matches
         .values_of("extensions")
         .unwrap()
-        .filter(|e| e.len() != 0)
+        .filter(|e| !e.is_empty())
         .collect::<Vec<&str>>();
+    let include_status_codes = matches
+        .values_of("include-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() { return false }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                error!("Ignoring invalid status code for '-s' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+    let ignore_status_codes = matches
+        .values_of("ignore-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() { return false }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                error!("Ignoring invalid status code for '-S' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+    let output = matches.value_of("output").unwrap();
+
+    match url.parse::<hyper::Uri>() {
+        Err(e) => {
+            error!("Invalid URL: {}", e);
+            return;
+        },
+        Ok(_) => (),
+    }
 
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
@@ -95,6 +176,15 @@ fn main() {
         "Using exit on connection errors: {:?}",
         exit_on_connection_errors
     );
+    debug!(
+        "Including status codes: {}",
+        if include_status_codes.is_empty() {
+            String::from("ALL")
+        } else {
+            format!("{:?}", include_status_codes)
+        }
+    );
+    debug!("Excluding status codes: {:?}", ignore_status_codes);
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -105,29 +195,54 @@ fn main() {
         3 | _ => trace!("Don't be crazy"),
     }
 
+    if !matches.is_present("no-banner") {
+        println!("{}", banner::generate());
+        println!("{}", banner::configuration(mode, url, matches.value_of("threads").unwrap(), wordlist_path))
+    }
+
     match mode {
         "dir" => {
             let urls = load_wordlist_and_build_urls(wordlist_path, url, extensions);
-            let numbers_of_request = urls.len();
-            let (tx, rx) = channel();
-            let mut results: Vec<fetcher::Target> = Vec::new();
-            let config = fetcher::Config {
+            let total_numbers_of_request = urls.len();
+            let (tx, rx) = channel::<SingleScanResult>();
+            let config = Config {
                 n_threads,
                 ignore_certificate,
             };
+            let rp_config = ResultProcessorConfig {
+                include: include_status_codes,
+                ignore: ignore_status_codes
+            };
+            let mut result_processor = ScanResult::new(rp_config);
+            let mut current_numbers_of_request = 0;
+            let start_time = SystemTime::now();
+            let bar = ProgressBar::new(total_numbers_of_request as u64); // XXX: won't work on i386
+            bar.set_draw_delta(100);
+            bar.set_style(ProgressStyle::default_bar()
+                .template("{spinner} [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} Elapsed: {elapsed_precise} ETA: {eta_precise} #request/seconds: {msg}")
+                .progress_chars("#>-"));
 
-            thread::spawn(move || fetcher::_run(tx, urls, &config));
+            thread::spawn(move || dirbuster::run(tx, urls, &config));
 
-            while results.len() != numbers_of_request {
+            while current_numbers_of_request != total_numbers_of_request {
+                current_numbers_of_request = current_numbers_of_request + 1;
+                bar.inc(1);
+                let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
+                if seconds_from_start != 0 {
+                    bar.set_message(&(current_numbers_of_request as u64 / seconds_from_start as u64).to_string());
+                } else {
+                    bar.set_message("warming up...")
+                }
+
                 let msg = match rx.recv() {
                     Ok(msg) => msg,
-                    Err(_err) => continue,
+                    Err(_err) => { error!("{:?}", _err); break },
                 };
 
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if results.len() == 0 || exit_on_connection_errors {
+                        if result_processor.count() == 0 || exit_on_connection_errors {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -135,54 +250,18 @@ fn main() {
                     None => (),
                 }
 
-                results.push(msg);
+                let was_added = result_processor.maybe_add_result(msg.clone());
+                if was_added {
+                    println!("\r{} {} {}", msg.method, msg.status, msg.url);
+                }
+            }
+
+            bar.finish();
+
+            if !output.is_empty() {
+                save_results(output, &result_processor.results);
             }
         }
         _ => (),
     }
-}
-
-fn load_wordlist_and_build_urls(
-    wordlist_path: &str,
-    url: &str,
-    extensions: Vec<&str>,
-) -> Vec<hyper::Uri> {
-    debug!("loading wordlist");
-    let contents =
-        fs::read_to_string(wordlist_path).expect("Something went wrong reading the file");
-
-    let splitted_lines = contents.lines();
-    build_urls(splitted_lines, url, extensions)
-}
-
-fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> Vec<hyper::Uri> {
-    debug!("building urls");
-    let mut urls: Vec<hyper::Uri> = Vec::new();
-    let urls_iter = splitted_lines
-        .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| format!("{}{}", url, word));
-
-    for url in urls_iter {
-        match url.parse::<hyper::Uri>() {
-            Ok(v) => {
-                urls.push(v);
-            }
-            Err(e) => {
-                error!("URI: {}", e);
-            }
-        }
-
-        for extension in extensions.iter() {
-            match format!("{}.{}", url, extension).parse::<hyper::Uri>() {
-                Ok(v) => {
-                    urls.push(v);
-                }
-                Err(e) => {
-                    error!("URI: {}", e);
-                }
-            }
-        }
-    }
-
-    urls
 }

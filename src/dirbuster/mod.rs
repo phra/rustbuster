@@ -8,30 +8,22 @@ use hyper_tls::{self, HttpsConnector};
 use native_tls;
 use std::sync::mpsc::Sender;
 
-#[derive(Debug, Clone)]
-pub struct Target {
-    url: Uri,
-    method: Method,
-    status: StatusCode,
-    pub error: Option<String>,
-}
+pub mod utils;
+pub mod result_processor;
 
-#[derive(Debug)]
-pub struct Config {
-    pub n_threads: usize,
-    pub ignore_certificate: bool,
-}
+use result_processor::SingleScanResult;
+use utils::*;
 
 fn _fetch_url(
-    tx: Sender<Target>,
+    tx: Sender<SingleScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
-    let mut target = Target {
-        url: url.clone(),
-        method: Method::GET,
-        status: StatusCode::default(),
+    let mut target = SingleScanResult {
+        url: url.to_string(),
+        method: Method::GET.to_string(),
+        status: StatusCode::default().to_string(),
         error: None,
     };
     let mut target_err = target.clone();
@@ -39,7 +31,7 @@ fn _fetch_url(
     client
         .get(url)
         .and_then(move |res| {
-            target.status = res.status();
+            target.status = res.status().to_string();
 
             tx.send(target).unwrap();
 
@@ -52,7 +44,7 @@ fn _fetch_url(
         })
 }
 
-pub fn _run(tx: Sender<Target>, urls: Vec<hyper::Uri>, config: &Config) {
+pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: &Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
     tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
     let tls_connector = tls_connector_builder
