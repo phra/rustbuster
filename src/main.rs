@@ -111,10 +111,6 @@ fn main() {
         )
         .get_matches();
 
-    if !matches.is_present("no-banner") {
-        println!("{}", banner::generate());
-    }
-
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
@@ -194,6 +190,11 @@ fn main() {
         1 => trace!("Some verbose info"),
         2 => trace!("Tons of verbose info"),
         3 | _ => trace!("Don't be crazy"),
+    }
+
+    if !matches.is_present("no-banner") {
+        println!("{}", banner::generate());
+        println!("{}", banner::configuration(mode, url, matches.value_of("threads").unwrap(), wordlist_path))
     }
 
     match mode {

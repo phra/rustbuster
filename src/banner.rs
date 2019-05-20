@@ -16,3 +16,15 @@ pub fn generate() -> String {
 ~ rustbuster v. {} ~ by phra & ps1dr3x ~
 ", VERSION)
 }
+
+pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> String {
+    format!("[+] Mode         : {}
+[+] Url/Domain   : {}
+[+] Threads      : {}
+[+] Wordlist     : {}
+", mode, url, threads, wordlist)
+}
+
+pub fn starting_time() {}
+
+pub fn ending_time() {}
