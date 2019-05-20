@@ -21,16 +21,16 @@ pub fn generate() -> String {
 
 pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> String {
     format!(
-        "[+] Mode         : {}
-[+] Url/Domain   : {}
-[+] Threads      : {}
-[+] Wordlist     : {}",
+        "[+] Mode\t: {}
+[+] Url/Domain\t: {}
+[+] Threads\t: {}
+[+] Wordlist\t: {}",
         mode, url, threads, wordlist
     )
 }
 
 pub fn starting_time() -> String {
-    format!("[?] Started at: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+    format!("[?] Started at\t: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
 }
 
 pub fn ending_time() -> String {

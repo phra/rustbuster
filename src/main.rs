@@ -107,10 +107,15 @@ fn main() {
         .arg(
             Arg::with_name("output")
                 .long("output")
-                .help("Save the results in the specified file")
+                .help("Saves the results in the specified file")
                 .short("o")
                 .default_value("")
                 .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("no-progress-bar")
+                .long("no-progress-bar")
+                .help("Disables the progress bar")
         )
         .get_matches();
 
@@ -118,6 +123,7 @@ fn main() {
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
     let ignore_certificate = matches.is_present("ignore-certificate");
+    let no_progress_bar = matches.is_present("no-progress-bar");
     let exit_on_connection_errors = matches.is_present("exit-on-error");
     let n_threads = matches
         .value_of("threads")
@@ -229,7 +235,8 @@ fn main() {
             let mut result_processor = ScanResult::new(rp_config);
             let mut current_numbers_of_request = 0;
             let start_time = SystemTime::now();
-            let bar = ProgressBar::new(total_numbers_of_request as u64); // XXX: won't work on i386
+            let bar = if no_progress_bar { ProgressBar::hidden() } 
+                else { ProgressBar::new(total_numbers_of_request as u64) }; // XXX: won't work on i386
             bar.set_draw_delta(100);
             bar.set_style(ProgressStyle::default_bar()
                 .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} #r/s: {msg}")
@@ -271,7 +278,7 @@ fn main() {
 
                 let was_added = result_processor.maybe_add_result(msg.clone());
                 if was_added {
-                    println!("\r{} {} {}", msg.method, msg.status, msg.url);
+                    println!("{} {}\t{}", msg.method, msg.status, msg.url);
                 }
             }
 
