@@ -8,6 +8,8 @@ pub struct Config {
     pub ignore_certificate: bool,
     pub http_method: String,
     pub http_body: String,
+    pub user_agent: String,
+    pub http_headers: Vec<(String, String)>,
 }
 
 pub fn load_wordlist_and_build_urls(
@@ -42,7 +44,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
                 urls.push(v);
             }
             Err(e) => {
-                error!("URI: {}", e);
+                debug!("URI: {}", e);
             }
         }
 
@@ -52,7 +54,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>) -> V
                     urls.push(v);
                 }
                 Err(e) => {
-                    error!("URI: {}", e);
+                    debug!("URI: {}", e);
                 }
             }
         }
@@ -76,4 +78,11 @@ pub fn save_results(path: &str, results: &Vec<SingleScanResult>) {
         Ok(_) => debug!("Results saved to: {}", path),
         Err(e) => error!("Error while writing results to file: {}\n{}", path, e),
     };
+}
+
+pub fn split_http_headers(header: &str) -> (String, String) {
+    let index = header.find(':').unwrap_or(0);
+    let header_name = header[..index].to_owned();
+    let header_value = header[index+1..].to_owned();
+    (header_name, header_value)
 }

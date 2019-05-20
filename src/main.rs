@@ -11,7 +11,7 @@ mod dirbuster;
 
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleScanResult},
-    utils::{load_wordlist_and_build_urls, save_results, Config},
+    utils::*,
 };
 
 use indicatif::{ProgressBar, ProgressStyle};
@@ -91,7 +91,7 @@ fn main() {
         .arg(
             Arg::with_name("include-status-codes")
                 .long("include-status-codes")
-                .help("Sets the list of status codes (comma-separated) to include in the results (default: all but the ignored ones)")
+                .help("Sets the list of status codes to include")
                 .short("s")
                 .default_value("")
                 .use_delimiter(true)
@@ -99,7 +99,7 @@ fn main() {
         .arg(
             Arg::with_name("ignore-status-codes")
                 .long("ignore-status-codes")
-                .help("Sets the list of status codes (comma-separated) to ignore from the results (default: 404)")
+                .help("Sets the list of status codes to ignore")
                 .short("S")
                 .default_value("404")
                 .use_delimiter(true)
@@ -133,8 +133,25 @@ fn main() {
                 .default_value("")
                 .takes_value(true)
         )
+        .arg(
+            Arg::with_name("http-header")
+                .long("http-header")
+                .help("Appends the specified HTTP header")
+                .short("H")
+                .multiple(true)
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("user-agent")
+                .long("user-agent")
+                .help("Uses the specified User-Agent")
+                .short("a")
+                .default_value("rustbuster")
+                .takes_value(true)
+        )
         .get_matches();
 
+    let user_agent = matches.value_of("user-agent").unwrap();
     let http_method = matches.value_of("http-method").unwrap();
     let http_body = matches.value_of("http-body").unwrap();
     let url = matches.value_of("url").unwrap();
@@ -143,6 +160,11 @@ fn main() {
     let ignore_certificate = matches.is_present("ignore-certificate");
     let no_progress_bar = matches.is_present("no-progress-bar");
     let exit_on_connection_errors = matches.is_present("exit-on-error");
+    let http_headers: Vec<(String, String)> = if matches.is_present("http-header") {
+        matches.values_of("http-header").unwrap().map(|h| dirbuster::utils::split_http_headers(h)).collect()
+    } else {
+        Vec::new()
+    };
     let n_threads = matches
         .value_of("threads")
         .unwrap()
@@ -200,6 +222,7 @@ fn main() {
     debug!("Using extensions: {:?}", extensions);
     debug!("Using concurrent requests: {:?}", n_threads);
     debug!("Using certificate validation: {:?}", !ignore_certificate);
+    debug!("Using HTTP headers: {:?}", http_headers);
     debug!(
         "Using exit on connection errors: {:?}",
         exit_on_connection_errors
@@ -247,6 +270,8 @@ fn main() {
                 ignore_certificate,
                 http_method: http_method.to_owned(),
                 http_body: http_body.to_owned(),
+                user_agent: user_agent.to_owned(),
+                http_headers,
             };
             let rp_config = ResultProcessorConfig {
                 include: include_status_codes,
@@ -262,7 +287,7 @@ fn main() {
             }; // XXX: won't work on i386
             bar.set_draw_delta(100);
             bar.set_style(ProgressStyle::default_bar()
-                .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} #r/s: {msg}")
+                .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
                 .progress_chars("#>-"));
 
             thread::spawn(move || dirbuster::run(tx, urls, config));
@@ -301,7 +326,7 @@ fn main() {
 
                 let was_added = result_processor.maybe_add_result(msg.clone());
                 if was_added {
-                    println!("{} {}\t{}", msg.method, msg.status, msg.url);
+                    bar.println(format!("{} {}\t{}", msg.method, msg.status, msg.url));
                 }
             }
 

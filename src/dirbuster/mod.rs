@@ -14,7 +14,7 @@ pub mod utils;
 use result_processor::SingleScanResult;
 use utils::*;
 
-fn _fetch_url(
+fn make_request_future(
     tx: Sender<SingleScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
@@ -28,9 +28,13 @@ fn _fetch_url(
         error: None,
     };
     let mut target_err = target.clone();
+    let mut request_builder = Request::builder();
 
-    let request = Request::builder()
-        .header("User-Agent", "rustbuster")
+    for header_tuple in config.http_headers {
+        request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
+    }
+
+    let request = request_builder.header("User-Agent", config.user_agent)
         .method(&config.http_method[..])
         .uri(url)
         .body(Body::from(config.http_body.clone()))
@@ -63,7 +67,7 @@ pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: Config) 
     let n_threads = config.n_threads;
 
     let stream = futures::stream::iter_ok(urls)
-        .map(move |url| _fetch_url(tx.clone(), &client, url, config.clone()))
+        .map(move |url| make_request_future(tx.clone(), &client, url, config.clone()))
         .buffer_unordered(n_threads)
         .for_each(Ok)
         .map_err(|err| eprintln!("Err {:?}", err));
