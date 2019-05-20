@@ -49,6 +49,7 @@ impl ScanResult {
         if !ignore
         && (self.config.include.is_empty()
         || include) {
+            print_result_stdout(&res);
             self.results.push(res);
         }
     }
@@ -56,4 +57,8 @@ impl ScanResult {
     pub fn count(&self) -> usize {
         self.results.len()
     }
+}
+
+fn print_result_stdout(result: &SingleScanResult) {
+    println!("{} {} {}", result.method, result.status, result.url)
 }
