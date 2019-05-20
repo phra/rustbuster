@@ -335,10 +335,10 @@ fn main() {
                 if was_added {
                     let mut extra = msg.extra.unwrap_or("".to_owned());
                     if !extra.is_empty() {
-                        extra = format!("\t=>\t{}", extra)
+                        extra = format!("\n\t\t\t\t\t=> {}", extra)
                     }
 
-                    bar.println(format!("{} {}\t\t\t{}\t{}", msg.method, msg.status, msg.url, extra));
+                    bar.println(format!("{} {}\t\t\t{}{}", msg.method, msg.status, msg.url, extra));
                 }
             }
 
