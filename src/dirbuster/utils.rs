@@ -2,10 +2,12 @@ use std::{fs, fs::File, io::Write, path::Path, str};
 
 use super::result_processor::SingleScanResult;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub n_threads: usize,
     pub ignore_certificate: bool,
+    pub http_method: String,
+    pub http_body: String,
 }
 
 pub fn load_wordlist_and_build_urls(

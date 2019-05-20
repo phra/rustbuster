@@ -3,7 +3,7 @@ extern crate log;
 
 use clap::{App, Arg};
 
-use std::time::{SystemTime};
+use std::time::SystemTime;
 use std::{str::FromStr, sync::mpsc::channel, thread};
 
 mod banner;
@@ -117,8 +117,26 @@ fn main() {
                 .long("no-progress-bar")
                 .help("Disables the progress bar")
         )
+        .arg(
+            Arg::with_name("http-method")
+                .long("http-method")
+                .help("Uses the specified HTTP method")
+                .short("X")
+                .default_value("GET")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("http-body")
+                .long("http-body")
+                .help("Uses the specified HTTP method")
+                .short("b")
+                .default_value("")
+                .takes_value(true)
+        )
         .get_matches();
 
+    let http_method = matches.value_of("http-method").unwrap();
+    let http_body = matches.value_of("http-body").unwrap();
     let url = matches.value_of("url").unwrap();
     let wordlist_path = matches.value_of("wordlist").unwrap();
     let mode = matches.value_of("mode").unwrap();
@@ -227,6 +245,8 @@ fn main() {
             let config = Config {
                 n_threads,
                 ignore_certificate,
+                http_method: http_method.to_owned(),
+                http_body: http_body.to_owned(),
             };
             let rp_config = ResultProcessorConfig {
                 include: include_status_codes,
@@ -235,14 +255,17 @@ fn main() {
             let mut result_processor = ScanResult::new(rp_config);
             let mut current_numbers_of_request = 0;
             let start_time = SystemTime::now();
-            let bar = if no_progress_bar { ProgressBar::hidden() } 
-                else { ProgressBar::new(total_numbers_of_request as u64) }; // XXX: won't work on i386
+            let bar = if no_progress_bar {
+                ProgressBar::hidden()
+            } else {
+                ProgressBar::new(total_numbers_of_request as u64)
+            }; // XXX: won't work on i386
             bar.set_draw_delta(100);
             bar.set_style(ProgressStyle::default_bar()
                 .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} #r/s: {msg}")
                 .progress_chars("#>-"));
 
-            thread::spawn(move || dirbuster::run(tx, urls, &config));
+            thread::spawn(move || dirbuster::run(tx, urls, config));
 
             while current_numbers_of_request != total_numbers_of_request {
                 current_numbers_of_request = current_numbers_of_request + 1;

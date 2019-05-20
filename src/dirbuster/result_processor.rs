@@ -29,7 +29,7 @@ impl ScanResult {
     }
 
     pub fn maybe_add_result(&mut self, res: SingleScanResult) -> bool {
-        debug!("{:?}", res);
+        trace!("{:?}", res);
         let mut ignore = false;
         let mut include = false;
         for code in self.config.ignore.iter() {
