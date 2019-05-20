@@ -2,6 +2,8 @@
 
 DirBuster for Rust
 
+[![asciicast](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU.svg)](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU)
+
 ## Usage
 
 ```shell
