@@ -30,9 +30,15 @@ pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> St
 }
 
 pub fn starting_time() -> String {
-    format!("[?] Started at\t: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+    format!(
+        "[?] Started at\t: {}\n",
+        Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    )
 }
 
 pub fn ending_time() -> String {
-    format!("\n[?] Ended at: {}", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+    format!(
+        "\n[?] Ended at: {}",
+        Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    )
 }
