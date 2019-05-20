@@ -36,7 +36,7 @@ fn make_request_future(
             }
         };
 
-        future::lazy(|| Ok(()))
+        Ok(())
     })
 }
 
