@@ -26,6 +26,7 @@ fn make_request_future(
         method: Method::GET.to_string(),
         status: StatusCode::default().to_string(),
         error: None,
+        extra: None,
     };
     let mut target_err = target.clone();
     let mut request_builder = Request::builder();
@@ -43,7 +44,12 @@ fn make_request_future(
     client
         .request(request)
         .and_then(move |res| {
-            target.status = res.status().to_string();
+            let status = res.status();
+            target.status = status.to_string();
+            if status.is_redirection() {
+                target.extra = Some(res.headers().get("Location").unwrap().to_str().unwrap().to_owned());
+            }
+
             tx.send(target).unwrap();
             Ok(())
         })

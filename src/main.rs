@@ -333,7 +333,12 @@ fn main() {
 
                 let was_added = result_processor.maybe_add_result(msg.clone());
                 if was_added {
-                    bar.println(format!("{} {}\t\t\t{}", msg.method, msg.status, msg.url));
+                    let mut extra = msg.extra.unwrap_or("".to_owned());
+                    if !extra.is_empty() {
+                        extra = format!("\t=>\t{}", extra)
+                    }
+
+                    bar.println(format!("{} {}\t\t\t{}\t{}", msg.method, msg.status, msg.url, extra));
                 }
             }
 

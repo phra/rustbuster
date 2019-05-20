@@ -6,6 +6,7 @@ pub struct SingleScanResult {
     pub method: String,
     pub status: String,
     pub error: Option<String>,
+    pub extra: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
