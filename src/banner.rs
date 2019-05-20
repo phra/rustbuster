@@ -1,3 +1,5 @@
+use chrono::Local;
+
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub fn generate() -> String {
@@ -22,12 +24,15 @@ pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> St
         "[+] Mode         : {}
 [+] Url/Domain   : {}
 [+] Threads      : {}
-[+] Wordlist     : {}
-",
+[+] Wordlist     : {}",
         mode, url, threads, wordlist
     )
 }
 
-pub fn starting_time() {}
+pub fn starting_time() -> String {
+    format!("[?] Started at: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+}
 
-pub fn ending_time() {}
+pub fn ending_time() -> String {
+    format!("\n[?] Ended at: {}", Local::now().format("%Y-%m-%d %H:%M:%S").to_string())
+}

@@ -3,7 +3,7 @@ extern crate log;
 
 use clap::{App, Arg};
 
-use std::time::{Duration, SystemTime};
+use std::time::{SystemTime};
 use std::{str::FromStr, sync::mpsc::channel, thread};
 
 mod banner;
@@ -209,7 +209,8 @@ fn main() {
                 matches.value_of("threads").unwrap(),
                 wordlist_path
             )
-        )
+        );
+        println!("{}", banner::starting_time());
     }
 
     match mode {
@@ -275,6 +276,9 @@ fn main() {
             }
 
             bar.finish();
+            if !matches.is_present("no-banner") {
+                println!("{}", banner::ending_time());
+            }
 
             if !output.is_empty() {
                 save_results(output, &result_processor.results);
