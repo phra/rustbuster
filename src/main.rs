@@ -20,7 +20,7 @@ fn main() {
     pretty_env_logger::init();
     let matches = App::new("rustbuster")
         .version("0.1")
-        .author("phra <greensoncio@gmail.com>, ps1dr3x <michele@federici.tech>")
+        .author("by phra & ps1dr3x")
         .about("DirBuster for rust")
         .arg(
             Arg::with_name("verbose")
