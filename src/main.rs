@@ -231,7 +231,7 @@ fn main() {
             let bar = ProgressBar::new(total_numbers_of_request as u64); // XXX: won't work on i386
             bar.set_draw_delta(100);
             bar.set_style(ProgressStyle::default_bar()
-                .template("{spinner} [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} Elapsed: {elapsed_precise} ETA: {eta_precise} #request/seconds: {msg}")
+                .template("{spinner} [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} Elapsed: {elapsed_precise} ETA: {eta_precise} #r/s: {msg}")
                 .progress_chars("#>-"));
 
             thread::spawn(move || dirbuster::run(tx, urls, &config));
