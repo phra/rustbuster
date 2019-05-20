@@ -46,7 +46,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
                     urls.push(v);
                 }
                 Err(e) => {
-                    debug!("URI: {}", e);
+                    trace!("URI: {}", e);
                 }
             }
         }
@@ -56,7 +56,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
                 urls.push(v);
             }
             Err(e) => {
-                debug!("URI: {}", e);
+                trace!("URI: {}", e);
             }
         }
 
@@ -67,7 +67,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
                         urls.push(v);
                     }
                     Err(e) => {
-                        debug!("URI: {}", e);
+                        trace!("URI: {}", e);
                     }
                 }
             }
@@ -77,7 +77,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
                     urls.push(v);
                 }
                 Err(e) => {
-                    debug!("URI: {}", e);
+                    trace!("URI: {}", e);
                 }
             }
         }
