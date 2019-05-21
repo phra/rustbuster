@@ -1,6 +1,9 @@
-use std::{fs, fs::File, io::Write, path::Path, str};
+use std::{
+    fs, fs::File, path::Path, str,
+    io::Write
+};
 
-use super::result_processor::SingleScanResult;
+use super::result_processor::SingleDirScanResult;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -12,24 +15,17 @@ pub struct Config {
     pub http_headers: Vec<(String, String)>,
 }
 
-pub fn load_wordlist_and_build_urls(
+pub fn build_urls(
     wordlist_path: &str,
     url: &str,
     extensions: Vec<&str>,
     append_slash: bool,
 ) -> Vec<hyper::Uri> {
-    debug!("loading wordlist");
-    let contents =
-        fs::read_to_string(wordlist_path).expect("Something went wrong reading the file");
-
-    let splitted_lines = contents.lines();
-    build_urls(splitted_lines, url, extensions, append_slash)
-}
-
-fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, append_slash: bool) -> Vec<hyper::Uri> {
     debug!("building urls");
     let mut urls: Vec<hyper::Uri> = Vec::new();
-    let urls_iter = splitted_lines
+    let wordlist = fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
+    let urls_iter = wordlist
+        .lines()
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
         .map(|word| {
             if url.ends_with("/") {
@@ -88,7 +84,7 @@ fn build_urls(splitted_lines: str::Lines, url: &str, extensions: Vec<&str>, appe
     urls
 }
 
-pub fn save_results(path: &str, results: &Vec<SingleScanResult>) {
+pub fn save_dir_results(path: &str, results: &Vec<SingleDirScanResult>) {
     let json_string = serde_json::to_string(&results).unwrap();
 
     let mut file = match File::create(Path::new(path)) {

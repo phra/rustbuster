@@ -11,17 +11,17 @@ use std::sync::mpsc::Sender;
 pub mod result_processor;
 pub mod utils;
 
-use result_processor::SingleScanResult;
+use result_processor::SingleDirScanResult;
 use utils::*;
 
 fn make_request_future(
-    tx: Sender<SingleScanResult>,
+    tx: Sender<SingleDirScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
     url: Uri,
     config: Config,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
-    let mut target = SingleScanResult {
+    let mut target = SingleDirScanResult {
         url: url.to_string(),
         method: Method::GET.to_string(),
         status: StatusCode::default().to_string(),
@@ -60,7 +60,7 @@ fn make_request_future(
         })
 }
 
-pub fn run(tx: Sender<SingleScanResult>, urls: Vec<hyper::Uri>, config: Config) {
+pub fn run(tx: Sender<SingleDirScanResult>, urls: Vec<hyper::Uri>, config: Config) {
     let mut tls_connector_builder = native_tls::TlsConnector::builder();
     tls_connector_builder.danger_accept_invalid_certs(config.ignore_certificate);
     let tls_connector = tls_connector_builder
