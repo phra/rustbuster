@@ -1,37 +1,45 @@
 use futures::{future, Future, Stream};
 use hyper::rt;
-use serde::{Deserialize, Serialize};
 
 use std::{sync::mpsc::Sender, net::ToSocketAddrs};
+
+pub mod result_processor;
+pub mod utils;
+
+use result_processor::SingleDnsScanResult;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub n_threads: usize
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SingleDnsScanResult {
-    pub domain: String,
-    pub status: bool
-}
-
 fn make_request_future(
     tx: Sender<SingleDnsScanResult>,
     domain: String
 ) -> impl Future<Item = (), Error = ()> {
-    let mut result = SingleDnsScanResult {
-        domain,
-        status: false
-    };
-
     future::lazy(move || {
-        match result.domain.to_socket_addrs() {
+        match domain.to_socket_addrs() {
             Ok(v) => {
-                result.status = true;
+                debug!("{:?}", v);
+                let mut addrs: Vec<std::net::SocketAddr> = Vec::new();
+                for addr in v {
+                    addrs.push(addr);
+                }
+
+                let result = SingleDnsScanResult {
+                    domain,
+                    status: true,
+                    extra: Some(addrs),
+                };
                 tx.send(result).unwrap();
             }
-            Err(e) => {
-                println!("err {}", e);
+            Err(_e) => {
+                let result = SingleDnsScanResult {
+                    domain,
+                    status: false,
+                    extra: None,
+                };
+
                 tx.send(result).unwrap();
             }
         };

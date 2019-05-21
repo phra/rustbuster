@@ -15,12 +15,6 @@ pub struct Config {
     pub http_headers: Vec<(String, String)>,
 }
 
-fn load_wordlist(wordlist_path: &str) -> String {
-    debug!("loading wordlist");
-    fs::read_to_string(wordlist_path)
-        .expect("Something went wrong reading the wordlist file")
-}
-
 pub fn build_urls(
     wordlist_path: &str,
     url: &str,
@@ -29,7 +23,7 @@ pub fn build_urls(
 ) -> Vec<hyper::Uri> {
     debug!("building urls");
     let mut urls: Vec<hyper::Uri> = Vec::new();
-    let wordlist = load_wordlist(wordlist_path);
+    let wordlist = fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
     let urls_iter = wordlist
         .lines()
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
@@ -90,16 +84,7 @@ pub fn build_urls(
     urls
 }
 
-pub fn build_domains(wordlist_path: &str, url: &str) -> Vec<String> {
-    debug!("building urls");
-    load_wordlist(wordlist_path)
-        .lines()
-        .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| format!("{}.{}", word, url))
-        .collect()
-}
-
-pub fn save_results(path: &str, results: &Vec<SingleDirScanResult>) {
+pub fn save_dir_results(path: &str, results: &Vec<SingleDirScanResult>) {
     let json_string = serde_json::to_string(&results).unwrap();
 
     let mut file = match File::create(Path::new(path)) {

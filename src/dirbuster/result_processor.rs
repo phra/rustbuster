@@ -54,8 +54,4 @@ impl ScanResult {
 
         false
     }
-
-    pub fn count(&self) -> usize {
-        self.results.len()
-    }
 }
