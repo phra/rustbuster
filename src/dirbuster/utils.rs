@@ -6,7 +6,7 @@ use std::{
 use super::result_processor::SingleDirScanResult;
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct DirConfig {
     pub n_threads: usize,
     pub ignore_certificate: bool,
     pub http_method: String,
