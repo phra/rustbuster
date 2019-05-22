@@ -458,9 +458,6 @@ fn main() {
                 original_url: url.to_owned(),
             };
             let mut result_processor = VhostScanResult::new();
-
-
-
             let bar = if no_progress_bar {
                 ProgressBar::hidden()
             } else {
@@ -525,9 +522,6 @@ fn main() {
             if !output.is_empty() {
                 save_vhost_results(output, &result_processor.results);
             }
-
-
-
         },
         _ => (),
     }
