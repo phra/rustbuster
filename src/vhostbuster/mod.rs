@@ -35,11 +35,11 @@ fn make_request_future(
         status: StatusCode::default().to_string(),
         error: None,
         method: config.http_method.clone(),
-        ignored: true,
+        ignored: false,
     };
     let mut target_err = target.clone();
     let mut request_builder = Request::builder();
-
+    let ignore_strings = config.ignore_strings.clone();
     let request = request_builder.header("User-Agent", &config.user_agent[..])
         .method(&config.http_method[..])
         .uri(&config.original_url)
@@ -49,15 +49,12 @@ fn make_request_future(
 
     client
         .request(request)
-        .and_then(move |res| {
-            let status = res.status();
-            let body = res.into_body().to_string(); // todo
-            for ignore in config.ignore_strings {
-                if !body.contains(ignore) {
-                    
-                }
-            }
-            target.status = status.to_string();
+        .and_then(|res| {
+            res.body().concat2()
+        })
+        .and_then(move |_body| {
+            let vec = _body.iter().cloned().collect();
+            let stringify = String::from_utf8(vec).unwrap();
             tx.send(target).unwrap();
             Ok(())
         })
