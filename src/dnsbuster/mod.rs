@@ -9,7 +9,7 @@ pub mod utils;
 use result_processor::SingleDnsScanResult;
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct DnsConfig {
     pub n_threads: usize
 }
 
@@ -48,7 +48,7 @@ fn make_request_future(
     })
 }
 
-pub fn run(tx: Sender<SingleDnsScanResult>, domains: Vec<String>, config: Config) {
+pub fn run(tx: Sender<SingleDnsScanResult>, domains: Vec<String>, config: DnsConfig) {
     let stream = futures::stream::iter_ok(domains)
         .map(move |url| make_request_future(tx.clone(), url))
         .buffer_unordered(config.n_threads)
