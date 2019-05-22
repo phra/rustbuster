@@ -5,16 +5,6 @@ use std::{
 
 use super::result_processor::SingleDirScanResult;
 
-#[derive(Debug, Clone)]
-pub struct DirConfig {
-    pub n_threads: usize,
-    pub ignore_certificate: bool,
-    pub http_method: String,
-    pub http_body: String,
-    pub user_agent: String,
-    pub http_headers: Vec<(String, String)>,
-}
-
 pub fn build_urls(
     wordlist_path: &str,
     url: &str,
