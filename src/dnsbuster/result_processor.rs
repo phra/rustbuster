@@ -8,12 +8,6 @@ pub struct SingleDnsScanResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResultProcessorConfig {
-    pub include: Vec<String>,
-    pub ignore: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DnsScanResult {
     pub results: Vec<SingleDnsScanResult>,
 }
