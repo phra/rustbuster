@@ -42,7 +42,7 @@ OPTIONS:
     -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
     -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
     -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
-    -m, --mode <mode>                                    Sets the mode of operation (dir, dns, fuzz) [default: dir]
+    -m, --mode <mode>                                    Sets the mode of operation (dir, dns, vhost) [default: dir]
     -o, --output <output>                                Saves the results in the specified file [default: ]
     -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
     -u, --url <url>                                      Sets the target URL
