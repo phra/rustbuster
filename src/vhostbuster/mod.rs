@@ -50,11 +50,19 @@ fn make_request_future(
     client
         .request(request)
         .and_then(|res| {
-            res.body().concat2()
+            res.into_body().concat2()
         })
         .and_then(move |_body| {
             let vec = _body.iter().cloned().collect();
-            let stringify = String::from_utf8(vec).unwrap();
+            let body = String::from_utf8(vec).unwrap();
+            target.ignored = false;
+            for s in ignore_strings {
+                if body.contains(&s) {
+                    target.ignored = true;
+                    break;
+                }
+            }
+
             tx.send(target).unwrap();
             Ok(())
         })
@@ -76,6 +84,7 @@ pub fn run(tx: Sender<SingleVhostScanResult>, urls: Vec<hyper::Uri>, config: Vho
     let https_connector = HttpsConnector::from((http_connector, tls_connector));
     let client = Client::builder().build(https_connector);
     let n_threads = config.n_threads;
+    debug!("{:?}", urls);
 
     let stream = futures::stream::iter_ok(urls)
         .map(move |url| make_request_future(tx.clone(), &client, url, &config))
