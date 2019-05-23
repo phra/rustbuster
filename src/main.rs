@@ -165,13 +165,29 @@ fn main() {
                 .takes_value(true)
         )
         .arg(
+            Arg::with_name("domain")
+                .long("domain")
+                .help("Uses the specified domain")
+                .short("d")
+                .takes_value(true)
+        )
+        .arg(
             Arg::with_name("append-slash")
                 .long("append-slash")
                 .help("Tries to also append / to the base request")
                 .short("f")
         )
+        .arg(
+            Arg::with_name("ignore-string")
+                .long("ignore-string")
+                .help("Ignores results with specified string in vhost mode")
+                .short("x")
+                .multiple(true)
+                .takes_value(true)
+        )
         .get_matches();
 
+    let domain = matches.value_of("domain").unwrap_or("");
     let append_slash = matches.is_present("append-slash");
     let user_agent = matches.value_of("user-agent").unwrap();
     let http_method = matches.value_of("http-method").unwrap();
@@ -184,6 +200,11 @@ fn main() {
     let exit_on_connection_errors = matches.is_present("exit-on-error");
     let http_headers: Vec<(String, String)> = if matches.is_present("http-header") {
         matches.values_of("http-header").unwrap().map(|h| dirbuster::utils::split_http_headers(h)).collect()
+    } else {
+        Vec::new()
+    };
+    let ignore_strings: Vec<String> = if matches.is_present("ignore-string") {
+        matches.values_of("ignore-string").unwrap().map(|h| h.to_owned()).collect()
     } else {
         Vec::new()
     };
@@ -446,7 +467,12 @@ fn main() {
             }
         },
         "vhost" => {
-            let vhosts = build_vhosts(wordlist_path, url);
+            if domain.is_empty() {
+                error!("domain not specified (-d)");
+                return;
+            }
+
+            let vhosts = build_vhosts(wordlist_path, domain);
             let total_numbers_of_request = vhosts.len();
             let (tx, rx) = channel::<SingleVhostScanResult>();
             let config = VhostConfig {
@@ -454,7 +480,7 @@ fn main() {
                 ignore_certificate,
                 http_method: http_method.to_owned(),
                 user_agent: user_agent.to_owned(),
-                ignore_strings: Vec::new(),
+                ignore_strings,
                 original_url: url.to_owned(),
             };
             let mut result_processor = VhostScanResult::new();
@@ -510,8 +536,11 @@ fn main() {
                         _ => 0,
                     };
 
-                result_processor.maybe_add_result(msg.clone());
-                bar.println(format!("{}\t{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.vhost));
+                if !msg.ignored {
+                    result_processor.maybe_add_result(msg.clone());
+                    bar.println(format!("{}\t{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.vhost));
+                }
+
             }
 
             bar.finish();
