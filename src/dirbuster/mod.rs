@@ -47,7 +47,8 @@ fn make_request_future(
 
     let request = request_builder.header("User-Agent", &config.user_agent[..])
         .method(&config.http_method[..])
-        .uri(url)
+        .uri(&url)
+        .header("Host", url.host().unwrap())
         .body(Body::from(config.http_body.clone()))
         .expect("Request builder");
 
