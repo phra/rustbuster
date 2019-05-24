@@ -1,5 +1,5 @@
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
+#[macro_use] extern crate clap;
 
 use clap::{App, Arg};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -33,7 +33,7 @@ use vhostbuster::{
 fn main() {
     pretty_env_logger::init();
     let matches = App::new("rustbuster")
-        .version("0.1")
+        .version(crate_version!())
         .author("by phra & ps1dr3x")
         .about("DirBuster for rust")
         .arg(
