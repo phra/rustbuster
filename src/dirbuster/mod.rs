@@ -12,7 +12,6 @@ pub mod result_processor;
 pub mod utils;
 
 use result_processor::SingleDirScanResult;
-use utils::*;
 
 #[derive(Debug, Clone)]
 pub struct DirConfig {
