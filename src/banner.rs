@@ -15,8 +15,15 @@ pub fn generate() -> String {
 / / /  \\ \\ \\/ / /____\\/ /\\ \\/___/ / /_/ /     / / /__________/ / /____\\/ /\\ \\/___/ / /_/ /     / / /_______/ / /  \\ \\ \\   
 \\/_/    \\_\\/\\/_________/  \\_____\\/  \\_\\/      \\/_____________\\/_________/  \\_____\\/  \\_\\/      \\/__________\\/_/    \\_\\/   
 
-~ rustbuster v. {} ~ by phra & ps1dr3x ~
-", VERSION)
+")
+}
+
+pub fn copyright() -> String {
+    format!(
+        "~ rustbuster v{} ~ by phra & ps1dr3x ~
+",
+        VERSION
+    )
 }
 
 pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> String {

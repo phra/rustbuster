@@ -1,7 +1,4 @@
-use std::{
-    fs, fs::File, path::Path, str,
-    io::Write
-};
+use std::{fs, fs::File, io::Write, path::Path, str};
 
 use super::result_processor::SingleDirScanResult;
 
@@ -13,7 +10,8 @@ pub fn build_urls(
 ) -> Vec<hyper::Uri> {
     debug!("building urls");
     let mut urls: Vec<hyper::Uri> = Vec::new();
-    let wordlist = fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
+    let wordlist =
+        fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
     let urls_iter = wordlist
         .lines()
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
@@ -94,6 +92,6 @@ pub fn save_dir_results(path: &str, results: &Vec<SingleDirScanResult>) {
 pub fn split_http_headers(header: &str) -> (String, String) {
     let index = header.find(':').unwrap_or(0);
     let header_name = header[..index].to_owned();
-    let header_value = header[index+2..].to_owned();
+    let header_value = header[index + 2..].to_owned();
     (header_name, header_value)
 }

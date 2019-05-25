@@ -1,7 +1,7 @@
 use futures::{future, Future, Stream};
 use hyper::rt;
 
-use std::{sync::mpsc::Sender, net::ToSocketAddrs};
+use std::{net::ToSocketAddrs, sync::mpsc::Sender};
 
 pub mod result_processor;
 pub mod utils;
@@ -10,12 +10,12 @@ use result_processor::SingleDnsScanResult;
 
 #[derive(Debug, Clone)]
 pub struct DnsConfig {
-    pub n_threads: usize
+    pub n_threads: usize,
 }
 
 fn make_request_future(
     tx: Sender<SingleDnsScanResult>,
-    domain: String
+    domain: String,
 ) -> impl Future<Item = (), Error = ()> {
     future::lazy(move || {
         match domain.to_socket_addrs() {

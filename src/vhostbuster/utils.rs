@@ -1,23 +1,16 @@
-use std::{
-    fs, fs::File, path::Path, str,
-    io::Write
-};
+use std::{fs, fs::File, io::Write, path::Path, str};
 
 use super::result_processor::SingleVhostScanResult;
 
-pub fn build_vhosts(
-    wordlist_path: &str,
-    url: &str,
-) -> Vec<hyper::Uri> {
+pub fn build_vhosts(wordlist_path: &str, url: &str) -> Vec<hyper::Uri> {
     debug!("building urls");
     let mut urls: Vec<hyper::Uri> = Vec::new();
-    let wordlist = fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
+    let wordlist =
+        fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
     let urls_iter = wordlist
         .lines()
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| {
-            format!("{}.{}", word, url)
-        });
+        .map(|word| format!("{}.{}", word, url));
 
     for url in urls_iter {
         match url.parse::<hyper::Uri>() {
