@@ -19,8 +19,11 @@ pub fn generate() -> String {
 }
 
 pub fn copyright() -> String {
-    format!("~ rustbuster v{} ~ by phra & ps1dr3x ~
-", VERSION)
+    format!(
+        "~ rustbuster v{} ~ by phra & ps1dr3x ~
+",
+        VERSION
+    )
 }
 
 pub fn configuration(mode: &str, url: &str, threads: &str, wordlist: &str) -> String {

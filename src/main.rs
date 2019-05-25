@@ -1,14 +1,13 @@
-#[macro_use] extern crate log;
-#[macro_use] extern crate clap;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate clap;
 
 use clap::{App, Arg};
 use indicatif::{ProgressBar, ProgressStyle};
-use terminal_size::{Width, Height, terminal_size};
+use terminal_size::{terminal_size, Height, Width};
 
-use std::{
-    str::FromStr, sync::mpsc::channel,
-    time::SystemTime, thread
-};
+use std::{str::FromStr, sync::mpsc::channel, thread, time::SystemTime};
 
 mod banner;
 mod dirbuster;
@@ -17,18 +16,18 @@ mod vhostbuster;
 
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
-    DirConfig,
     utils::*,
+    DirConfig,
 };
 use dnsbuster::{
-    result_processor::{SingleDnsScanResult, DnsScanResult},
-    DnsConfig,
+    result_processor::{DnsScanResult, SingleDnsScanResult},
     utils::*,
+    DnsConfig,
 };
 use vhostbuster::{
     result_processor::{SingleVhostScanResult, VhostScanResult},
-    VhostConfig,
     utils::*,
+    VhostConfig,
 };
 
 fn main() {
@@ -110,7 +109,7 @@ fn main() {
                 .help("Sets the list of status codes to include")
                 .short("s")
                 .default_value("")
-                .use_delimiter(true)
+                .use_delimiter(true),
         )
         .arg(
             Arg::with_name("ignore-status-codes")
@@ -118,7 +117,7 @@ fn main() {
                 .help("Sets the list of status codes to ignore")
                 .short("S")
                 .default_value("404")
-                .use_delimiter(true)
+                .use_delimiter(true),
         )
         .arg(
             Arg::with_name("output")
@@ -126,12 +125,12 @@ fn main() {
                 .help("Saves the results in the specified file")
                 .short("o")
                 .default_value("")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("no-progress-bar")
                 .long("no-progress-bar")
-                .help("Disables the progress bar")
+                .help("Disables the progress bar"),
         )
         .arg(
             Arg::with_name("http-method")
@@ -139,7 +138,7 @@ fn main() {
                 .help("Uses the specified HTTP method")
                 .short("X")
                 .default_value("GET")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("http-body")
@@ -147,7 +146,7 @@ fn main() {
                 .help("Uses the specified HTTP method")
                 .short("b")
                 .default_value("")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("http-header")
@@ -155,7 +154,7 @@ fn main() {
                 .help("Appends the specified HTTP header")
                 .short("H")
                 .multiple(true)
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("user-agent")
@@ -163,20 +162,20 @@ fn main() {
                 .help("Uses the specified User-Agent")
                 .short("a")
                 .default_value("rustbuster")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("domain")
                 .long("domain")
                 .help("Uses the specified domain")
                 .short("d")
-                .takes_value(true)
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("append-slash")
                 .long("append-slash")
                 .help("Tries to also append / to the base request")
-                .short("f")
+                .short("f"),
         )
         .arg(
             Arg::with_name("ignore-string")
@@ -184,7 +183,7 @@ fn main() {
                 .help("Ignores results with specified string in vhost mode")
                 .short("x")
                 .multiple(true)
-                .takes_value(true)
+                .takes_value(true),
         )
         .get_matches();
 
@@ -201,12 +200,20 @@ fn main() {
     let mut no_progress_bar = matches.is_present("no-progress-bar");
     let exit_on_connection_errors = matches.is_present("exit-on-error");
     let http_headers: Vec<(String, String)> = if matches.is_present("http-header") {
-        matches.values_of("http-header").unwrap().map(|h| dirbuster::utils::split_http_headers(h)).collect()
+        matches
+            .values_of("http-header")
+            .unwrap()
+            .map(|h| dirbuster::utils::split_http_headers(h))
+            .collect()
     } else {
         Vec::new()
     };
     let ignore_strings: Vec<String> = if matches.is_present("ignore-string") {
-        matches.values_of("ignore-string").unwrap().map(|h| h.to_owned()).collect()
+        matches
+            .values_of("ignore-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
     } else {
         Vec::new()
     };
@@ -410,9 +417,23 @@ fn main() {
                     };
 
                     if no_progress_bar {
-                        println!("{}\t{}{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.url, extra);
+                        println!(
+                            "{}\t{}{}{}{}",
+                            msg.method,
+                            msg.status,
+                            "\t".repeat(n_tabs),
+                            msg.url,
+                            extra
+                        );
                     } else {
-                        bar.println(format!("{}\t{}{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.url, extra));
+                        bar.println(format!(
+                            "{}\t{}{}{}{}",
+                            msg.method,
+                            msg.status,
+                            "\t".repeat(n_tabs),
+                            msg.url,
+                            extra
+                        ));
                     }
                 }
             }
@@ -440,7 +461,7 @@ fn main() {
             bar.set_style(ProgressStyle::default_bar()
                 .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
                 .progress_chars("#>-"));
-            
+
             thread::spawn(move || dnsbuster::run(tx, domains, config));
 
             while current_numbers_of_request != total_numbers_of_request {
@@ -469,9 +490,9 @@ fn main() {
                 match msg.status {
                     true => {
                         if no_progress_bar {
-                            println!("OK\t{}", &msg.domain[..msg.domain.len()-3]);
+                            println!("OK\t{}", &msg.domain[..msg.domain.len() - 3]);
                         } else {
-                            bar.println(format!("OK\t{}", &msg.domain[..msg.domain.len()-3]));
+                            bar.println(format!("OK\t{}", &msg.domain[..msg.domain.len() - 3]));
                         }
 
                         match msg.extra {
@@ -485,17 +506,17 @@ fn main() {
                                             } else {
                                                 bar.println(format!("\t\tIPv4: {}", string_repr));
                                             }
-                                        },
+                                        }
                                         false => {
                                             if no_progress_bar {
                                                 println!("\t\tIPv6: {}", string_repr);
                                             } else {
                                                 bar.println(format!("\t\tIPv6: {}", string_repr));
                                             }
-                                        },
+                                        }
                                     }
                                 }
-                            },
+                            }
                             None => (),
                         }
                     }
@@ -509,7 +530,7 @@ fn main() {
             if !output.is_empty() {
                 save_dns_results(output, &result_processor.results);
             }
-        },
+        }
         "vhost" => {
             if domain.is_empty() {
                 error!("domain not specified (-d)");
@@ -578,19 +599,31 @@ fn main() {
                 }
 
                 let n_tabs = match msg.status.len() / 8 {
-                        3 => 1,
-                        2 => 2,
-                        1 => 3,
-                        0 => 4,
-                        _ => 0,
-                    };
+                    3 => 1,
+                    2 => 2,
+                    1 => 3,
+                    0 => 4,
+                    _ => 0,
+                };
 
                 if !msg.ignored {
                     result_processor.maybe_add_result(msg.clone());
                     if no_progress_bar {
-                        println!("{}\t{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.vhost);
+                        println!(
+                            "{}\t{}{}{}",
+                            msg.method,
+                            msg.status,
+                            "\t".repeat(n_tabs),
+                            msg.vhost
+                        );
                     } else {
-                        bar.println(format!("{}\t{}{}{}", msg.method, msg.status, "\t".repeat(n_tabs), msg.vhost));
+                        bar.println(format!(
+                            "{}\t{}{}{}",
+                            msg.method,
+                            msg.status,
+                            "\t".repeat(n_tabs),
+                            msg.vhost
+                        ));
                     }
                 }
             }
@@ -601,7 +634,7 @@ fn main() {
             if !output.is_empty() {
                 save_vhost_results(output, &result_processor.results);
             }
-        },
+        }
         _ => (),
     }
 }

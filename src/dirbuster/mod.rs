@@ -44,7 +44,8 @@ fn make_request_future(
         request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
     }
 
-    let request = request_builder.header("User-Agent", &config.user_agent[..])
+    let request = request_builder
+        .header("User-Agent", &config.user_agent[..])
         .method(&config.http_method[..])
         .uri(&url)
         .header("Host", url.host().unwrap())
@@ -57,7 +58,14 @@ fn make_request_future(
             let status = res.status();
             target.status = status.to_string();
             if status.is_redirection() {
-                target.extra = Some(res.headers().get("Location").unwrap().to_str().unwrap().to_owned());
+                target.extra = Some(
+                    res.headers()
+                        .get("Location")
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_owned(),
+                );
             }
 
             tx.send(target).unwrap();

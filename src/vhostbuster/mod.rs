@@ -2,7 +2,7 @@ use futures::Stream;
 use hyper::{
     client::HttpConnector,
     rt::{self, Future},
-    Body, Client, Request, StatusCode, Uri
+    Body, Client, Request, StatusCode, Uri,
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
@@ -31,20 +31,19 @@ fn make_request_future(
     config: &VhostConfig,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
-    let target = Arc::new(Mutex::new(
-        SingleVhostScanResult {
-            vhost: url.to_string(),
-            status: StatusCode::default().to_string(),
-            error: None,
-            method: config.http_method.clone(),
-            ignored: false
-        }
-    ));
+    let target = Arc::new(Mutex::new(SingleVhostScanResult {
+        vhost: url.to_string(),
+        status: StatusCode::default().to_string(),
+        error: None,
+        method: config.http_method.clone(),
+        ignored: false,
+    }));
     let target_res = target.clone();
     let mut target_err = (*target.lock().unwrap()).clone();
     let mut request_builder = Request::builder();
     let ignore_strings = config.ignore_strings.clone();
-    let request = request_builder.header("User-Agent", &config.user_agent[..])
+    let request = request_builder
+        .header("User-Agent", &config.user_agent[..])
         .method(&config.http_method[..])
         .uri(&config.original_url)
         .header("Host", url.host().unwrap())
@@ -68,10 +67,7 @@ fn make_request_future(
                 }
             }
 
-            let target = Arc::try_unwrap(target_res)
-                .unwrap()
-                .into_inner()
-                .unwrap();
+            let target = Arc::try_unwrap(target_res).unwrap().into_inner().unwrap();
             tx.send(target).unwrap();
             Ok(())
         })

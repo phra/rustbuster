@@ -1,10 +1,11 @@
-use std::{fs, path, io::Write};
+use std::{fs, io::Write, path};
 
 use super::result_processor::SingleDnsScanResult;
 
 pub fn build_domains(wordlist_path: &str, url: &str) -> Vec<String> {
     debug!("building urls");
-    fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file")
+    fs::read_to_string(wordlist_path)
+        .expect("Something went wrong reading the wordlist file")
         .lines()
         .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
         .map(|word| format!("{}.{}:80", word, url))
