@@ -261,10 +261,23 @@ fn main() {
 
     match url.parse::<hyper::Uri>() {
         Err(e) => {
-            error!("Invalid URL: {}", e);
+            error!("Invalid URL: {}, consider adding a protocol like http:// or https://", e);
             return;
         }
-        Ok(_) => (),
+        Ok(v) => {
+            match v.scheme_part() {
+                Some(s) => {
+                    if s != "http" && s != "https" {
+                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
+                        return;
+                    }
+                },
+                None => {
+                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                    return;
+                },
+            }
+        },
     }
 
     if std::fs::metadata(wordlist_path).is_err() {
