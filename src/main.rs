@@ -273,8 +273,10 @@ fn main() {
                     }
                 },
                 None => {
-                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
-                    return;
+                    if mode != "dns" {
+                        error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                        return;
+                    }
                 },
             }
         },
