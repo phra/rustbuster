@@ -265,10 +265,9 @@ fn main() {
             return;
         }
         Ok(v) => {
-            debug!("{:?}", v.scheme_part());
             match v.scheme_part() {
                 Some(s) => {
-                    if s != "http" || s != "https" {
+                    if s != "http" && s != "https" {
                         error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
                         return;
                     }
