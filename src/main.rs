@@ -13,6 +13,7 @@ mod banner;
 mod dirbuster;
 mod dnsbuster;
 mod vhostbuster;
+mod fuzzbuster;
 
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
@@ -28,6 +29,11 @@ use vhostbuster::{
     result_processor::{SingleVhostScanResult, VhostScanResult},
     utils::*,
     VhostConfig,
+};
+use fuzzbuster::{
+    result_processor::{SingleFuzzScanResult, FuzzScanResult},
+    utils::*,
+    FuzzConfig,
 };
 
 fn main() {
@@ -650,6 +656,9 @@ fn main() {
                 save_vhost_results(output, &result_processor.results);
             }
         }
+        "fuzz" => {
+            ()
+        },
         _ => (),
     }
 }
