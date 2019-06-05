@@ -261,19 +261,39 @@ impl FuzzBuster {
         } else { error!("No injection points"); "ERROR" };
 
         match case {
-            "url" => {
+            "url" | "body" => {
                 for words in wordlists_iter {
-                    let mut _url = self.url.clone();
+                    let mut url = self.url.clone();
+                    let mut http_body = self.http_body.clone();
+                    let mut words_iter = words.iter();
 
-                    for word in words {
-                        _url = _url.replacen("FUZZ", &word, 1);
+                    while url.contains("FUZZ") {
+                        match words_iter.next() {
+                            None => break,
+                            Some(word) => {
+                                url = url.replacen("FUZZ", word, 1);
+                            },
+                        }
                     }
 
-                    match _url.parse::<hyper::Uri>() {
-                        Ok(v) => {
+                    while http_body.contains("FUZZ") {
+                        match words_iter.next() {
+                            None => break,
+                            Some(word) => {
+                                http_body = http_body.replacen("FUZZ", word, 1);
+                            },
+                        }
+                    }
+
+                    for word in words {
+                        http_body = http_body.replacen("FUZZ", &word, 1);
+                    }
+
+                    match url.parse::<hyper::Uri>() {
+                        Ok(uri) => {
                             requests.push(FuzzRequest {
-                                http_body: self.http_body.clone(),
-                                uri: v,
+                                http_body,
+                                uri,
                                 user_agent: self.user_agent.clone(),
                                 http_method: self.http_method.clone(),
                                 http_headers: self.http_headers.clone(),
@@ -286,7 +306,6 @@ impl FuzzBuster {
                 }
             },
             "header" => (),
-            "body" => (),
             _ => (),
         }
 
