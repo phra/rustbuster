@@ -12,7 +12,7 @@ pub mod result_processor;
 pub mod utils;
 
 use result_processor::SingleFuzzScanResult;
-use utils::FuzzRequest;
+use utils::{FuzzRequest, FuzzConfig};
 
 fn make_request_future(
     tx: Sender<SingleFuzzScanResult>,

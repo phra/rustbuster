@@ -2,6 +2,9 @@
 extern crate log;
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate itertools;
+
 
 use clap::{App, Arg};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -32,8 +35,7 @@ use vhostbuster::{
 };
 use fuzzbuster::{
     result_processor::{SingleFuzzScanResult, FuzzScanResult},
-    utils::*,
-    FuzzConfig,
+    utils::{build_requests, FuzzConfig},
 };
 
 fn main() {
@@ -69,6 +71,7 @@ fn main() {
                 .help("Sets the wordlist")
                 .short("w")
                 .takes_value(true)
+                .multiple(true)
                 .required(true),
         )
         .arg(
@@ -199,7 +202,7 @@ fn main() {
     let http_method = matches.value_of("http-method").unwrap();
     let http_body = matches.value_of("http-body").unwrap();
     let url = matches.value_of("url").unwrap();
-    let wordlist_path = matches.value_of("wordlist").unwrap();
+    let wordlist_paths = matches.values_of("wordlist").unwrap().map(|w| w.to_owned()).collect::<Vec<String>>();
     let mode = matches.value_of("mode").unwrap();
     let ignore_certificate = matches.is_present("ignore-certificate");
     let mut no_banner = matches.is_present("no-banner");
@@ -288,14 +291,24 @@ fn main() {
         },
     }
 
-    if std::fs::metadata(wordlist_path).is_err() {
-        error!("Specified wordlist does not exist: {}", wordlist_path);
+    let all_wordlists_exist = wordlist_paths.iter()
+        .map(|wordlist_path| {
+            if std::fs::metadata(wordlist_path).is_err() {
+                error!("Specified wordlist does not exist: {}", wordlist_path);
+                return false;
+            } else {
+                return true;
+            }
+        })
+        .fold(true, |acc, e| acc && e);
+    
+    if !all_wordlists_exist {
         return;
     }
 
     debug!("Using mode: {:?}", mode);
     debug!("Using url: {:?}", url);
-    debug!("Using wordlist: {:?}", wordlist_path);
+    debug!("Using wordlist: {:?}", wordlist_paths);
     debug!("Using mode: {:?}", mode);
     debug!("Using extensions: {:?}", extensions);
     debug!("Using concurrent requests: {:?}", n_threads);
@@ -351,7 +364,7 @@ fn main() {
             mode,
             url,
             matches.value_of("threads").unwrap(),
-            wordlist_path
+            &wordlist_paths[0]
         )
     );
     println!("{}", banner::starting_time());
@@ -361,7 +374,7 @@ fn main() {
 
     match mode {
         "dir" => {
-            let urls = build_urls(wordlist_path, url, extensions, append_slash);
+            let urls = build_urls(&wordlist_paths[0], url, extensions, append_slash);
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleDirScanResult>();
             let config = DirConfig {
@@ -467,7 +480,7 @@ fn main() {
             }
         }
         "dns" => {
-            let domains = build_domains(wordlist_path, url);
+            let domains = build_domains(&wordlist_paths[0], url);
             let total_numbers_of_request = domains.len();
             let (tx, rx) = channel::<SingleDnsScanResult>();
             let config = DnsConfig { n_threads };
@@ -563,7 +576,7 @@ fn main() {
                 return;
             }
 
-            let vhosts = build_vhosts(wordlist_path, domain);
+            let vhosts = build_vhosts(&wordlist_paths[0], domain);
             let total_numbers_of_request = vhosts.len();
             let (tx, rx) = channel::<SingleVhostScanResult>();
             let config = VhostConfig {
@@ -657,7 +670,18 @@ fn main() {
             }
         }
         "fuzz" => {
-            ()
+            let config = FuzzConfig {
+                n_threads,
+                ignore_certificate,
+                http_method: http_method.to_owned(),
+                http_body: http_body.to_owned(),
+                user_agent: user_agent.to_owned(),
+                http_headers,
+                wordlist_paths,
+                url: url.to_owned(),
+            };
+
+            let requests = build_requests(&config);
         },
         _ => (),
     }

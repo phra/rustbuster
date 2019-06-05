@@ -1,4 +1,5 @@
 use std::{fs, fs::File, io::Write, path::Path, str };
+use itertools::Itertools;
 
 use super::result_processor::SingleFuzzScanResult;
 
@@ -10,15 +11,15 @@ pub struct FuzzConfig {
     pub http_body: String,
     pub user_agent: String,
     pub http_headers: Vec<(String, String)>,
-    pub wordlist_path: Vec<String>,
+    pub wordlist_paths: Vec<String>,
     pub url: String,
 }
 
 pub struct FuzzRequest {
-    uri: hyper::Uri,
-    method: String,
-    headers: Vec<String>,
-    body: String,
+    pub uri: hyper::Uri,
+    pub method: String,
+    pub headers: Vec<(String, String)>,
+    pub body: String,
 }
 
 fn is_url_case(config: &FuzzConfig) -> bool {
@@ -41,12 +42,12 @@ fn is_body_case(config: &FuzzConfig) -> bool {
     config.http_body.contains("FUZZ")
 }
 
-pub fn _build_requests(
-    config: FuzzConfig,
+pub fn build_requests(
+    config: &FuzzConfig,
 ) -> Vec<FuzzRequest> {
     debug!("building requests");
     let mut requests: Vec<FuzzRequest> = Vec::new();
-    let wordlists = config.wordlist_path.iter()
+    let wordlists_iter = config.wordlist_paths.iter()
         .map(|path| {
             fs::read_to_string(path).expect("Something went wrong reading the wordlist file")
         })
@@ -54,9 +55,8 @@ pub fn _build_requests(
             wordlist
                 .lines()
                 .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-                .collect::<Vec<&str>>()
         })
-        .collect::<Vec<Vec<&str>>>();
+        .multi_cartesian_product();
 
     let case = if is_url_case(&config) {
         "url"
@@ -68,18 +68,21 @@ pub fn _build_requests(
 
     match case {
         "url" => {
-            let urls = Vec::<String>::new();
-            for wordlist in wordlists {
-                for word in wordlist {
-                    urls.push(config.url.replace("FUZZ", word)); // TODO
+            for words in wordlists_iter {
+                let mut _url = config.url;
+
+                for word in words {
+                    _url = _url.replacen("FUZZ", word, 1);
                 }
-            }
 
-            for request in requests_iter {
-
-                match url.parse::<hyper::Uri>() {
+                match _url.parse::<hyper::Uri>() {
                     Ok(v) => {
-                        requests.push(request);
+                        requests.push(FuzzRequest {
+                            body: config.http_body,
+                            uri: v,
+                            method: config.http_method,
+                            headers: config.http_headers,
+                        });
                     }
                     Err(e) => {
                         trace!("URI: {}", e);
