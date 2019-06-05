@@ -685,7 +685,7 @@ fn main() {
                 output: output.to_owned(),
             };
 
-            thread::spawn(move || fuzzbuster.run()).join();
+            fuzzbuster.run();
         },
         _ => (),
     }
