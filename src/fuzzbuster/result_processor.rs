@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Write, path::Path, str};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SingleFuzzScanResult {
@@ -10,20 +11,20 @@ pub struct SingleFuzzScanResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ResultProcessorConfig {
+pub struct FuzzResultProcessorConfig {
     pub include: Vec<String>,
     pub ignore: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct FuzzScanResult {
+pub struct FuzzScanProcessor {
     pub results: Vec<SingleFuzzScanResult>,
-    config: ResultProcessorConfig,
+    config: FuzzResultProcessorConfig,
 }
 
-impl FuzzScanResult {
-    pub fn new(config: ResultProcessorConfig) -> Self {
-        FuzzScanResult {
+impl FuzzScanProcessor {
+    pub fn new(config: FuzzResultProcessorConfig) -> Self {
+        FuzzScanProcessor {
             results: Vec::<SingleFuzzScanResult>::new(),
             config,
         }
@@ -53,5 +54,22 @@ impl FuzzScanResult {
         }
 
         false
+    }
+
+    pub fn save_fuzz_results(self, path: &str) {
+        let json_string = serde_json::to_string(&self.results).unwrap();
+
+        let mut file = match File::create(Path::new(path)) {
+            Ok(f) => f,
+            Err(e) => {
+                error!("Error while creating file: {}\n{}", path, e);
+                return;
+            }
+        };
+
+        match file.write_all(json_string.as_bytes()) {
+            Ok(_) => debug!("Results saved to: {}", path),
+            Err(e) => error!("Error while writing results to file: {}\n{}", path, e),
+        };
     }
 }

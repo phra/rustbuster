@@ -34,8 +34,7 @@ use vhostbuster::{
     VhostConfig,
 };
 use fuzzbuster::{
-    result_processor::{SingleFuzzScanResult, FuzzScanResult},
-    utils::{build_requests, FuzzConfig},
+    FuzzBuster,
 };
 
 fn main() {
@@ -670,7 +669,7 @@ fn main() {
             }
         }
         "fuzz" => {
-            let config = FuzzConfig {
+            let fuzzbuster = FuzzBuster {
                 n_threads,
                 ignore_certificate,
                 http_method: http_method.to_owned(),
@@ -679,9 +678,14 @@ fn main() {
                 http_headers,
                 wordlist_paths,
                 url: url.to_owned(),
+                ignore_status_codes,
+                include_status_codes,
+                no_progress_bar,
+                exit_on_connection_errors,
+                output: output.to_owned(),
             };
 
-            let requests = build_requests(&config);
+            thread::spawn(move || fuzzbuster.run());
         },
         _ => (),
     }
