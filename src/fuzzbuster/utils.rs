@@ -1,75 +1,98 @@
-use std::{fs, fs::File, io::Write, path::Path, str};
+use std::{fs, fs::File, io::Write, path::Path, str };
 
 use super::result_processor::SingleFuzzScanResult;
 
-pub fn build_requests(
-    wordlist_path: &str,
-    url: &str,
-    extensions: Vec<&str>,
-    append_slash: bool,
-) -> Vec<hyper::Uri> {
-    debug!("building urls");
-    let mut urls: Vec<hyper::Uri> = Vec::new();
-    let wordlist =
-        fs::read_to_string(wordlist_path).expect("Something went wrong reading the wordlist file");
-    let urls_iter = wordlist
-        .lines()
-        .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
-        .map(|word| {
-            if url.ends_with("/") {
-                format!("{}{}", url, word)
-            } else {
-                format!("{}/{}", url, word)
-            }
-        });
+#[derive(Debug, Clone)]
+pub struct FuzzConfig {
+    pub n_threads: usize,
+    pub ignore_certificate: bool,
+    pub http_method: String,
+    pub http_body: String,
+    pub user_agent: String,
+    pub http_headers: Vec<(String, String)>,
+    pub wordlist_path: Vec<String>,
+    pub url: String,
+}
 
-    for url in urls_iter {
-        if append_slash {
-            if !url.ends_with("/") {
-                match format!("{}/", url).parse::<hyper::Uri>() {
+pub struct FuzzRequest {
+    uri: hyper::Uri,
+    method: String,
+    headers: Vec<String>,
+    body: String,
+}
+
+fn is_url_case(config: &FuzzConfig) -> bool {
+    config.url.contains("FUZZ")
+}
+
+fn is_header_case(config: &FuzzConfig) -> bool {
+    let sum = config.http_headers.iter().map(|(header, value)| -> usize {
+        if header.contains("FUZZ") || value.contains("FUZZ") {
+            return 1
+        } else {
+            return 0
+        }
+    }).sum::<usize>();
+
+    sum > 0
+}
+
+fn is_body_case(config: &FuzzConfig) -> bool {
+    config.http_body.contains("FUZZ")
+}
+
+pub fn _build_requests(
+    config: FuzzConfig,
+) -> Vec<FuzzRequest> {
+    debug!("building requests");
+    let mut requests: Vec<FuzzRequest> = Vec::new();
+    let wordlists = config.wordlist_path.iter()
+        .map(|path| {
+            fs::read_to_string(path).expect("Something went wrong reading the wordlist file")
+        })
+        .map(|wordlist| {
+            wordlist
+                .lines()
+                .filter(|word| !word.starts_with('#') && !word.starts_with(' '))
+                .collect::<Vec<&str>>()
+        })
+        .collect::<Vec<Vec<&str>>>();
+
+    let case = if is_url_case(&config) {
+        "url"
+    } else if is_header_case(&config) {
+        "header"
+    } else if is_body_case(&config) {
+        "body"
+    } else { error!("No injection points"); "ERROR" };
+
+    match case {
+        "url" => {
+            let urls = Vec::<String>::new();
+            for wordlist in wordlists {
+                for word in wordlist {
+                    urls.push(config.url.replace("FUZZ", word)); // TODO
+                }
+            }
+
+            for request in requests_iter {
+
+                match url.parse::<hyper::Uri>() {
                     Ok(v) => {
-                        urls.push(v);
+                        requests.push(request);
                     }
                     Err(e) => {
                         trace!("URI: {}", e);
                     }
                 }
             }
-        }
-
-        match url.parse::<hyper::Uri>() {
-            Ok(v) => {
-                urls.push(v);
-            }
-            Err(e) => {
-                trace!("URI: {}", e);
-            }
-        }
-
-        for extension in extensions.iter() {
-            if append_slash {
-                match format!("{}.{}/", url, extension).parse::<hyper::Uri>() {
-                    Ok(v) => {
-                        urls.push(v);
-                    }
-                    Err(e) => {
-                        trace!("URI: {}", e);
-                    }
-                }
-            }
-
-            match format!("{}.{}", url, extension).parse::<hyper::Uri>() {
-                Ok(v) => {
-                    urls.push(v);
-                }
-                Err(e) => {
-                    trace!("URI: {}", e);
-                }
-            }
-        }
+        },
+        "header" => (),
+        "body" => (),
+        _ => (),
     }
 
-    urls
+    requests
 }
 
 pub fn save_fuzz_results(path: &str, results: &Vec<SingleFuzzScanResult>) {

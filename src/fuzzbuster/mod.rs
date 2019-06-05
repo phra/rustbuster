@@ -2,7 +2,7 @@ use futures::Stream;
 use hyper::{
     client::HttpConnector,
     rt::{self, Future},
-    Body, Client, Method, Request, StatusCode, Uri,
+    Body, Client, Method, Request, StatusCode,
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
@@ -12,22 +12,12 @@ pub mod result_processor;
 pub mod utils;
 
 use result_processor::SingleFuzzScanResult;
-
-#[derive(Debug, Clone)]
-pub struct FuzzConfig {
-    pub n_threads: usize,
-    pub ignore_certificate: bool,
-    pub http_method: String,
-    pub http_body: String,
-    pub user_agent: String,
-    pub http_headers: Vec<(String, String)>,
-}
+use utils::FuzzRequest;
 
 fn make_request_future(
     tx: Sender<SingleFuzzScanResult>,
     client: &Client<HttpsConnector<HttpConnector>>,
-    url: Uri,
-    config: &FuzzConfig,
+    request: &FuzzRequest,
 ) -> impl Future<Item = (), Error = ()> {
     let tx_err = tx.clone();
     let mut target = SingleFuzzScanResult {
