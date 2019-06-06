@@ -14,11 +14,9 @@ use std::sync::mpsc::channel;
 pub mod result_processor;
 mod utils;
 
-use utils::{split_http_headers};
-
 use result_processor::{FuzzResultProcessorConfig, FuzzScanProcessor, SingleFuzzScanResult};
 
-use std::{fs, fs::File, io::Write, path::Path, str, time::SystemTime};
+use std::{fs, time::SystemTime};
 
 use indicatif::{ProgressBar, ProgressStyle};
 
