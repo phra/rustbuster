@@ -219,26 +219,6 @@ impl FuzzBuster {
             })
     }
 
-    fn is_url_case(&self) -> bool {
-        self.url.contains("FUZZ")
-    }
-
-    fn is_header_case(&self) -> bool {
-        let sum = self.http_headers.iter().map(|(header, value)| -> usize {
-            if header.contains("FUZZ") || value.contains("FUZZ") {
-                return 1
-            } else {
-                return 0
-            }
-        }).sum::<usize>();
-
-        sum > 0
-    }
-
-    fn is_body_case(&self) -> bool {
-        self.http_body.contains("FUZZ")
-    }
-
     fn build_requests(&self) -> Vec<FuzzRequest> {
         debug!("building requests");
         let mut requests: Vec<FuzzRequest> = Vec::new();
@@ -252,93 +232,41 @@ impl FuzzBuster {
             })
             .multi_cartesian_product();
 
-        let case = if self.is_url_case() {
-            "url"
-        } else if self.is_header_case() {
-            "header"
-        } else if self.is_body_case() {
-            "body"
-        } else { error!("No injection points"); "ERROR" };
 
-        match case {
-            "url" | "body" => {
-                for words in wordlists_iter {
-                    let mut url = self.url.clone();
-                    let mut http_body = self.http_body.clone();
-                    let mut http_headers = self.http_headers.clone();
-                    let mut words_iter = words.iter();
+        for words in wordlists_iter {
+            let mut url = self.url.clone();
+            let mut http_body = self.http_body.clone();
+            let mut http_headers = self.http_headers.clone();
 
-                    for word in words {
-                        if url.contains("FUZZ") {
-                            url = url.replacen("FUZZ", &word, 1);
-                        }
-
-                        for (header, value) in http_headers.iter_mut() {
-                            header = header.replacen("FUZZ", &word, 1);
-                            value = value.replacen("FUZZ", &word, 1);
-                        }
-
-                        if http_body.contains("FUZZ") {
-                            http_body = http_body.replacen("FUZZ", &word, 1);
-                        }
-                    }
-
-                    // while url.contains("FUZZ") {
-                    //     match words_iter.next() {
-                    //         None => break,
-                    //         Some(word) => {
-                    //             url = url.replacen("FUZZ", word, 1);
-                    //         },
-                    //     }
-                    // }
-
-                    // for (header, value) in http_headers {
-                    //     while header.contains("FUZZ") {
-                    //         match words_iter.next() {
-                    //             None => break,
-                    //             Some(word) => {
-                    //                 header = header.replacen("FUZZ", word, 1);
-                    //             },
-                    //         }
-                    //     }
-
-                    //     while value.contains("FUZZ") {
-                    //         match words_iter.next() {
-                    //             None => break,
-                    //             Some(word) => {
-                    //                 value = value.replacen("FUZZ", word, 1);
-                    //             },
-                    //         }
-                    //     }
-                    // }
-
-                    // while http_body.contains("FUZZ") {
-                    //     match words_iter.next() {
-                    //         None => break,
-                    //         Some(word) => {
-                    //             http_body = http_body.replacen("FUZZ", word, 1);
-                    //         },
-                    //     }
-                    // }
-
-                    match url.parse::<hyper::Uri>() {
-                        Ok(uri) => {
-                            requests.push(FuzzRequest {
-                                http_body,
-                                uri,
-                                user_agent: self.user_agent.clone(),
-                                http_method: self.http_method.clone(),
-                                http_headers: self.http_headers.clone(),
-                            });
-                        }
-                        Err(e) => {
-                            trace!("URI: {}", e);
-                        }
-                    }
+            for word in words {
+                if url.contains("FUZZ") {
+                    url = url.replacen("FUZZ", &word, 1);
                 }
-            },
-            "header" => (),
-            _ => (),
+
+                for (header, value) in http_headers.iter_mut() {
+                    *header = header.replacen("FUZZ", &word, 1);
+                    *value = value.replacen("FUZZ", &word, 1);
+                }
+
+                if http_body.contains("FUZZ") {
+                    http_body = http_body.replacen("FUZZ", &word, 1);
+                }
+            }
+
+            match url.parse::<hyper::Uri>() {
+                Ok(uri) => {
+                    requests.push(FuzzRequest {
+                        http_body,
+                        uri,
+                        http_headers,
+                        user_agent: self.user_agent.clone(),
+                        http_method: self.http_method.clone(),
+                    });
+                }
+                Err(e) => {
+                    trace!("URI: {}", e);
+                }
+            }
         }
 
         requests
