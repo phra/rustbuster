@@ -265,29 +265,61 @@ impl FuzzBuster {
                 for words in wordlists_iter {
                     let mut url = self.url.clone();
                     let mut http_body = self.http_body.clone();
+                    let mut http_headers = self.http_headers.clone();
                     let mut words_iter = words.iter();
 
-                    while url.contains("FUZZ") {
-                        match words_iter.next() {
-                            None => break,
-                            Some(word) => {
-                                url = url.replacen("FUZZ", word, 1);
-                            },
-                        }
-                    }
-
-                    while http_body.contains("FUZZ") {
-                        match words_iter.next() {
-                            None => break,
-                            Some(word) => {
-                                http_body = http_body.replacen("FUZZ", word, 1);
-                            },
-                        }
-                    }
-
                     for word in words {
-                        http_body = http_body.replacen("FUZZ", &word, 1);
+                        if url.contains("FUZZ") {
+                            url = url.replacen("FUZZ", &word, 1);
+                        }
+
+                        for (header, value) in http_headers.iter_mut() {
+                            header = header.replacen("FUZZ", &word, 1);
+                            value = value.replacen("FUZZ", &word, 1);
+                        }
+
+                        if http_body.contains("FUZZ") {
+                            http_body = http_body.replacen("FUZZ", &word, 1);
+                        }
                     }
+
+                    // while url.contains("FUZZ") {
+                    //     match words_iter.next() {
+                    //         None => break,
+                    //         Some(word) => {
+                    //             url = url.replacen("FUZZ", word, 1);
+                    //         },
+                    //     }
+                    // }
+
+                    // for (header, value) in http_headers {
+                    //     while header.contains("FUZZ") {
+                    //         match words_iter.next() {
+                    //             None => break,
+                    //             Some(word) => {
+                    //                 header = header.replacen("FUZZ", word, 1);
+                    //             },
+                    //         }
+                    //     }
+
+                    //     while value.contains("FUZZ") {
+                    //         match words_iter.next() {
+                    //             None => break,
+                    //             Some(word) => {
+                    //                 value = value.replacen("FUZZ", word, 1);
+                    //             },
+                    //         }
+                    //     }
+                    // }
+
+                    // while http_body.contains("FUZZ") {
+                    //     match words_iter.next() {
+                    //         None => break,
+                    //         Some(word) => {
+                    //             http_body = http_body.replacen("FUZZ", word, 1);
+                    //         },
+                    //     }
+                    // }
 
                     match url.parse::<hyper::Uri>() {
                         Ok(uri) => {
