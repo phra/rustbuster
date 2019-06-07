@@ -152,7 +152,7 @@ impl FuzzBuster {
                     );
                 } else {
                     bar.println(format!(
-                        "{}\t{}{}{}\n\t\t\t\t\t\t=> PAYLOAD: ({:?}){}",
+                        "{}\t{}{}{}\n\t\t\t\t\t\t=> PAYLOAD: {:?}{}",
                         msg.method,
                         msg.status,
                         "\t".repeat(n_tabs),
@@ -259,12 +259,14 @@ impl FuzzBuster {
                     url = url.replacen("FUZZ", &word, 1);
                 }
 
-                for (header, _) in http_headers.iter_mut() {
-                    *header = header.replacen("FUZZ", &word, 1);
-                }
-
-                for (_, value) in http_headers.iter_mut() {
-                    *value = value.replacen("FUZZ", &word, 1);
+                for (header, value) in http_headers.iter_mut() {
+                    if header.contains("FUZZ") {
+                        *header = header.replacen("FUZZ", &word, 1);
+                        break;
+                    } else if value.contains("FUZZ") {
+                        *value = value.replacen("FUZZ", &word, 1);
+                        break;
+                    }
                 }
 
                 if http_body.contains("FUZZ") {
