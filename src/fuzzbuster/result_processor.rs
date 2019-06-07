@@ -9,22 +9,25 @@ pub struct SingleFuzzScanResult {
     pub error: Option<String>,
     pub extra: Option<String>,
     pub payload: Vec<String>,
+    pub body: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct FuzzResultProcessorConfig {
+pub struct FuzzScanProcessorConfig {
     pub include: Vec<String>,
     pub ignore: Vec<String>,
+    pub include_body: Vec<String>,
+    pub ignore_body: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FuzzScanProcessor {
     pub results: Vec<SingleFuzzScanResult>,
-    config: FuzzResultProcessorConfig,
+    config: FuzzScanProcessorConfig,
 }
 
 impl FuzzScanProcessor {
-    pub fn new(config: FuzzResultProcessorConfig) -> Self {
+    pub fn new(config: FuzzScanProcessorConfig) -> Self {
         FuzzScanProcessor {
             results: Vec::<SingleFuzzScanResult>::new(),
             config,
@@ -33,28 +36,42 @@ impl FuzzScanProcessor {
 
     pub fn maybe_add_result(&mut self, res: SingleFuzzScanResult) -> bool {
         trace!("{:?}", res);
-        let mut ignore = false;
-        let mut include = false;
-        for code in self.config.ignore.iter() {
-            if res.status.starts_with(code) {
-                ignore = true;
-                break;
+
+        if self.config.ignore.len() != 0 {
+            for code in &self.config.ignore {
+                if res.status.starts_with(code) {
+                    return false;
+                }
+            }
+        } else if self.config.include.len() != 0 {
+            for code in &self.config.include {
+                if res.status.starts_with(code) {
+                    self.results.push(res);
+                    return true;
+                }
             }
         }
 
-        for code in self.config.include.iter() {
-            if res.status.starts_with(code) {
-                include = true;
-                break;
+        if self.config.ignore_body.len() != 0 {
+            for ignore in &self.config.ignore_body {
+                if res.body.contains(ignore) {
+                    return false;
+                }
             }
-        }
-
-        if !ignore && (self.config.include.is_empty() || include) {
+        } if self.config.include_body.len() != 0 {
+            for include in &self.config.include_body {
+                if res.body.contains(include) {
+                    self.results.push(res);
+                    return true;
+                }
+            }
+        } else {
             self.results.push(res);
             return true;
         }
 
         false
+
     }
 
     pub fn save_fuzz_results(self, path: &str) {

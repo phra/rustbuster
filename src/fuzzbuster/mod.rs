@@ -9,12 +9,13 @@ use native_tls;
 use std::sync::mpsc::Sender;
 use itertools::Itertools;
 use std::sync::mpsc::channel;
+use std::thread;
 
 
 pub mod result_processor;
 mod utils;
 
-use result_processor::{FuzzResultProcessorConfig, FuzzScanProcessor, SingleFuzzScanResult};
+use result_processor::{FuzzScanProcessorConfig, FuzzScanProcessor, SingleFuzzScanResult};
 
 use std::{fs, time::SystemTime};
 
@@ -32,6 +33,8 @@ pub struct FuzzBuster {
     pub url: String,
     pub include_status_codes: Vec<String>,
     pub ignore_status_codes: Vec<String>,
+    pub include_body: Vec<String>,
+    pub ignore_body: Vec<String>,
     pub no_progress_bar: bool,
     pub exit_on_connection_errors: bool,
     pub output: String,
@@ -60,9 +63,11 @@ impl FuzzBuster {
         let https_connector = HttpsConnector::from((http_connector, tls_connector));
         let client = Client::builder().build(https_connector);
         let n_threads = self.n_threads;
-        let rp_config = FuzzResultProcessorConfig {
+        let rp_config = FuzzScanProcessorConfig {
             include: self.include_status_codes.clone(),
             ignore: self.ignore_status_codes.clone(),
+            include_body: self.include_body.clone(),
+            ignore_body: self.ignore_body.clone(),
         };
         let requests = self.build_requests();
         let mut current_numbers_of_request = 0;
@@ -74,7 +79,7 @@ impl FuzzBuster {
         } else {
             ProgressBar::new(requests.len() as u64)
         };
-        bar.set_draw_delta(100);
+        bar.set_draw_delta(1);
         bar.set_style(ProgressStyle::default_bar()
             .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
             .progress_chars("#>-"));
@@ -85,7 +90,7 @@ impl FuzzBuster {
             .for_each(Ok)
             .map_err(|err| eprintln!("Err {:?}", err));
 
-        rt::run(stream);
+        let _ = thread::spawn(move || rt::run(stream));
 
         while current_numbers_of_request != total_numbers_of_request {
             current_numbers_of_request = current_numbers_of_request + 1;
@@ -178,6 +183,7 @@ impl FuzzBuster {
             method: Method::GET.to_string(),
             status: StatusCode::default().to_string(),
             payload: request.payload.clone(),
+            body: request.http_body.clone(),
             error: None,
             extra: None,
         };
@@ -211,7 +217,14 @@ impl FuzzBuster {
                     );
                 }
 
-                tx.send(target).unwrap();
+                futures::future::ok(target).join(res.into_body().concat2())
+            })
+            .and_then(move |(target, body)| {
+                let mut target = target;
+                let vec = body.iter().cloned().collect();
+                let body = String::from_utf8(vec).unwrap();
+                target.body = body;
+                tx.send(target.clone()).unwrap();
                 Ok(())
             })
             .or_else(move |e| {
