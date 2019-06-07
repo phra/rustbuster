@@ -37,23 +37,6 @@ impl FuzzScanProcessor {
     pub fn maybe_add_result(&mut self, res: SingleFuzzScanResult) -> bool {
         trace!("{:?}", res);
 
-        if self.config.ignore.len() != 0 {
-            for code in &self.config.ignore {
-                if res.status.starts_with(code) {
-                    return false;
-                }
-            }
-        }
-
-        if self.config.include.len() != 0 {
-            for code in &self.config.include {
-                if res.status.starts_with(code) {
-                    self.results.push(res);
-                    return true;
-                }
-            }
-        }
-
         if self.config.ignore_body.len() != 0 {
             for ignore in &self.config.ignore_body {
                 if res.body.contains(ignore) {
@@ -65,6 +48,23 @@ impl FuzzScanProcessor {
         if self.config.include_body.len() != 0 {
             for include in &self.config.include_body {
                 if res.body.contains(include) {
+                    self.results.push(res);
+                    return true;
+                }
+            }
+        }
+
+        if self.config.ignore.len() != 0 {
+            for code in &self.config.ignore {
+                if res.status.starts_with(code) {
+                    return false;
+                }
+            }
+        }
+
+        if self.config.include.len() != 0 {
+            for code in &self.config.include {
+                if res.status.starts_with(code) {
                     self.results.push(res);
                     return true;
                 }
