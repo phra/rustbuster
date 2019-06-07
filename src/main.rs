@@ -2,9 +2,6 @@
 extern crate log;
 #[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate itertools;
-
 
 use clap::{App, Arg};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -38,6 +35,10 @@ use fuzzbuster::{
 };
 
 fn main() {
+    if std::env::vars().filter(|(name, _value)| name == "RUST_LOG").collect::<Vec<(String, String)>>().len() == 0 {
+        std::env::set_var("RUST_LOG", "rustbuster=warn");
+    }
+
     pretty_env_logger::init();
     let matches = App::new("rustbuster")
         .version(crate_version!())
@@ -188,9 +189,18 @@ fn main() {
         .arg(
             Arg::with_name("ignore-string")
                 .long("ignore-string")
-                .help("Ignores results with specified string in vhost mode")
+                .help("Ignores results with specified string in the HTTP Body")
                 .short("x")
                 .multiple(true)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("include-string")
+                .long("include-string")
+                .help("Includes results with specified string in the HTTP body")
+                .short("i")
+                .multiple(true)
+                .conflicts_with("ignore-string")
                 .takes_value(true),
         )
         .get_matches();
@@ -219,6 +229,15 @@ fn main() {
     let ignore_strings: Vec<String> = if matches.is_present("ignore-string") {
         matches
             .values_of("ignore-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let include_strings: Vec<String> = if matches.is_present("include-string") {
+        matches
+            .values_of("include-string")
             .unwrap()
             .map(|h| h.to_owned())
             .collect()
@@ -336,13 +355,16 @@ fn main() {
         3 | _ => trace!("Don't be crazy"),
     }
 
+    println!("{}", banner::copyright());
+
     if let Some((Width(w), Height(h))) = terminal_size() {
-        trace!("Your terminal is {} cols wide and {} lines tall", w, h);
         if w < 122 {
             no_banner = true;
         }
 
         if w < 104 {
+            warn!("Your terminal is {} cols wide and {} lines tall", w, h);
+            warn!("Disabling progress bar, minimum cols: 104");
             no_progress_bar = true;
         }
     } else {
@@ -354,8 +376,6 @@ fn main() {
     if !no_banner {
         println!("{}", banner::generate());
     }
-
-    println!("{}", banner::copyright());
 
     println!(
         "{}",
@@ -683,7 +703,11 @@ fn main() {
                 no_progress_bar,
                 exit_on_connection_errors,
                 output: output.to_owned(),
+                include_body: include_strings,
+                ignore_body: ignore_strings,
             };
+
+            debug!("FuzzBuster {:#?}", fuzzbuster);
 
             fuzzbuster.run();
         },
