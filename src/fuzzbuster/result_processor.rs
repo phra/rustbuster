@@ -43,7 +43,9 @@ impl FuzzScanProcessor {
                     return false;
                 }
             }
-        } else if self.config.include.len() != 0 {
+        }
+
+        if self.config.include.len() != 0 {
             for code in &self.config.include {
                 if res.status.starts_with(code) {
                     self.results.push(res);
@@ -58,14 +60,18 @@ impl FuzzScanProcessor {
                     return false;
                 }
             }
-        } if self.config.include_body.len() != 0 {
+        }
+
+        if self.config.include_body.len() != 0 {
             for include in &self.config.include_body {
                 if res.body.contains(include) {
                     self.results.push(res);
                     return true;
                 }
             }
-        } else {
+        }
+
+        if self.config.include.len() == 0 && self.config.include_body.len() == 0 {
             self.results.push(res);
             return true;
         }
