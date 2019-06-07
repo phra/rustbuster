@@ -79,7 +79,7 @@ impl FuzzBuster {
         } else {
             ProgressBar::new(requests.len() as u64)
         };
-        bar.set_draw_delta(1);
+        bar.set_draw_delta(100);
         bar.set_style(ProgressStyle::default_bar()
             .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
             .progress_chars("#>-"));
