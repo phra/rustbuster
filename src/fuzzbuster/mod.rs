@@ -246,8 +246,11 @@ impl FuzzBuster {
                     url = url.replacen("FUZZ", &word, 1);
                 }
 
-                for (header, value) in http_headers.iter_mut() {
+                for (header, _) in http_headers.iter_mut() {
                     *header = header.replacen("FUZZ", &word, 1);
+                }
+
+                for (_, value) in http_headers.iter_mut() {
                     *value = value.replacen("FUZZ", &word, 1);
                 }
 
