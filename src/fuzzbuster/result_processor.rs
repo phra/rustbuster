@@ -8,6 +8,7 @@ pub struct SingleFuzzScanResult {
     pub status: String,
     pub error: Option<String>,
     pub extra: Option<String>,
+    pub payload: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

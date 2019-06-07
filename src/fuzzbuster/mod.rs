@@ -43,6 +43,7 @@ pub struct FuzzRequest {
     pub http_headers: Vec<(String, String)>,
     pub http_body: String,
     pub user_agent: String,
+    pub payload: Vec<String>,
 }
 
 impl FuzzBuster {
@@ -136,21 +137,23 @@ impl FuzzBuster {
 
                 if self.no_progress_bar {
                     println!(
-                        "{}\t{}{}{}{}",
+                        "{}\t{}{}{} ({:?}){}",
                         msg.method,
                         msg.status,
                         "\t".repeat(n_tabs),
                         msg.url,
-                        extra
+                        msg.payload,
+                        extra,
                     );
                 } else {
                     bar.println(format!(
-                        "{}\t{}{}{}{}",
+                        "{}\t{}{}{}\n\t\t\t\t\t\t=> PAYLOAD: ({:?}){}",
                         msg.method,
                         msg.status,
                         "\t".repeat(n_tabs),
                         msg.url,
-                        extra
+                        msg.payload,
+                        extra,
                     ));
                 }
             }
@@ -174,6 +177,7 @@ impl FuzzBuster {
             url: request.uri.to_string(),
             method: Method::GET.to_string(),
             status: StatusCode::default().to_string(),
+            payload: request.payload.clone(),
             error: None,
             extra: None,
         };
@@ -235,6 +239,7 @@ impl FuzzBuster {
             let mut url = self.url.clone();
             let mut http_body = self.http_body.clone();
             let mut http_headers = self.http_headers.clone();
+            let payload = words.clone();
 
             for word in words {
                 if url.contains("FUZZ") {
@@ -257,6 +262,7 @@ impl FuzzBuster {
                         http_body,
                         uri,
                         http_headers,
+                        payload,
                         user_agent: self.user_agent.clone(),
                         http_method: self.http_method.clone(),
                     });
