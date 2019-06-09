@@ -175,12 +175,12 @@ impl FuzzBuster {
         }
     }
 
-    fn make_request_future<'a>(
+    fn make_request_future(
         self,
         tx: Sender<SingleFuzzScanResult>,
-        client: &'a Client<HttpsConnector<HttpConnector>>,
+        client: &Client<HttpsConnector<HttpConnector>>,
         request: FuzzRequest,
-    ) -> impl Future<Item = (), Error = ()> + 'a {
+    ) -> impl Future<Item = (), Error = ()> {
         let tx_err = tx.clone();
         let mut target = SingleFuzzScanResult {
             url: request.uri.to_string(),
@@ -193,18 +193,19 @@ impl FuzzBuster {
         };
         let mut target_err = target.clone();
         let mut request_builder = Request::builder();
+        let client2 = client.clone();
 
         for header_tuple in &request.http_headers {
             request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
         }
 
         let csrf_fut = if self.csrf_url.is_empty() {
-            futures::future::ok::<(Option<String>, FuzzRequest), _>((None, request))
+            futures::future::ok::<(Option<String>), _>(None)
         } else {
-            futures::future::ok::<(Option<String>, FuzzRequest), _>((Some("TOKEN".to_owned()), request))
+            futures::future::ok::<(Option<String>), _>(Some("TOKEN".to_owned()))
         };
 
-        csrf_fut.and_then(|(csrf, request)| {
+        csrf_fut.and_then(move |csrf| {
             match csrf {
                 Some(v) => { request = FuzzBuster::replaceCSRF(request, v) },
                 _ => (),
@@ -217,7 +218,7 @@ impl FuzzBuster {
             .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
-            client
+            client2
                 .request(request)
                 .and_then(move |res| {
                     let status = res.status();
