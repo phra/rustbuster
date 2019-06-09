@@ -705,6 +705,9 @@ fn main() {
                 output: output.to_owned(),
                 include_body: include_strings,
                 ignore_body: ignore_strings,
+                csrf_url: "".to_owned(),
+                csrf_regex: "".to_owned(),
+                csrf_headers: vec!(),
             };
 
             debug!("FuzzBuster {:#?}", fuzzbuster);

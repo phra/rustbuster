@@ -40,7 +40,7 @@ pub struct FuzzBuster {
     pub output: String,
     pub csrf_url: String,
     pub csrf_regex: String,
-    pub csrf_headers: Vec<String>,
+    pub csrf_headers: Vec<(String, String)>,
 }
 
 pub struct FuzzRequest {
@@ -50,6 +50,9 @@ pub struct FuzzRequest {
     pub http_body: String,
     pub user_agent: String,
     pub payload: Vec<String>,
+    pub csrf_url: String,
+    pub csrf_regex: String,
+    pub csrf_headers: Vec<(String, String)>,
 }
 
 impl FuzzBuster {
@@ -88,7 +91,7 @@ impl FuzzBuster {
             .progress_chars("#>-"));
 
         let stream = futures::stream::iter_ok(requests)
-            .map(move |request| self.make_request_future(tx.clone(), &client, request))
+            .map(move |request| FuzzBuster::make_request_future(tx.clone(), client.clone(), request))
             .buffer_unordered(n_threads)
             .for_each(Ok)
             .map_err(|err| eprintln!("Err {:?}", err));
@@ -175,12 +178,11 @@ impl FuzzBuster {
         }
     }
 
-    fn make_request_future<'a>(
-        self,
+    fn make_request_future(
         tx: Sender<SingleFuzzScanResult>,
-        client: &'a Client<HttpsConnector<HttpConnector>>,
+        client: Client<HttpsConnector<HttpConnector>>,
         request: FuzzRequest,
-    ) -> impl Future<Item = (), Error = ()> + 'a {
+    ) -> impl Future<Item = (), Error = ()> {
         let tx_err = tx.clone();
         let mut target = SingleFuzzScanResult {
             url: request.uri.to_string(),
@@ -198,16 +200,16 @@ impl FuzzBuster {
             request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
         }
 
-        let csrf_fut = if self.csrf_url.is_empty() {
+        let csrf_fut = if request.csrf_url.is_empty() {
             futures::future::ok::<(Option<String>), _>(None)
         } else {
             futures::future::ok::<(Option<String>), _>(Some("TOKEN".to_owned()))
         };
 
         csrf_fut.and_then(move |csrf| {
-            match csrf {
-                Some(v) => { request = FuzzBuster::replaceCSRF(request, v) },
-                _ => (),
+            let request = match csrf {
+                Some(v) => FuzzBuster::replace_csrf(request, v),
+                _ => request,
             };
 
             let request = request_builder
@@ -300,6 +302,9 @@ impl FuzzBuster {
                         payload,
                         user_agent: self.user_agent.clone(),
                         http_method: self.http_method.clone(),
+                        csrf_url: self.csrf_url.to_owned(),
+                        csrf_regex: self.csrf_regex.to_owned(),
+                        csrf_headers: self.csrf_headers.clone(),
                     });
                 }
                 Err(e) => {
@@ -311,14 +316,15 @@ impl FuzzBuster {
         requests
     }
 
-    fn replaceCSRF(request: FuzzRequest, csrf: String) -> FuzzRequest {
-        request.uri = request.uri.to_string().replace("CSRF", &csrf).parse::<hyper::Uri>().expect("replace csrf in uri");
-        for (header, value) in request.http_headers.iter_mut() {
+    fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
+        let mut p = request;
+        p.uri = p.uri.to_string().replace("CSRF", &csrf).parse::<hyper::Uri>().expect("replace csrf in uri");
+        for (header, value) in p.http_headers.iter_mut() {
             *header = header.replace("CSRF", &csrf);
             *value = value.replace("CSRF", &csrf);
         }
 
-        request.http_body = request.http_body.replace("CSRF", &csrf);
-        request
+        p.http_body = p.http_body.replace("CSRF", &csrf);
+        p
     }
 }
