@@ -175,12 +175,12 @@ impl FuzzBuster {
         }
     }
 
-    fn make_request_future(
+    fn make_request_future<'a>(
         self,
         tx: Sender<SingleFuzzScanResult>,
-        client: &Client<HttpsConnector<HttpConnector>>,
+        client: &'a Client<HttpsConnector<HttpConnector>>,
         request: FuzzRequest,
-    ) -> impl Future<Item = (), Error = ()> {
+    ) -> impl Future<Item = (), Error = ()> + 'a {
         let tx_err = tx.clone();
         let mut target = SingleFuzzScanResult {
             url: request.uri.to_string(),
@@ -193,7 +193,6 @@ impl FuzzBuster {
         };
         let mut target_err = target.clone();
         let mut request_builder = Request::builder();
-        let client2 = client.clone();
 
         for header_tuple in &request.http_headers {
             request_builder.header(header_tuple.0.as_str(), header_tuple.1.as_str());
@@ -218,7 +217,7 @@ impl FuzzBuster {
             .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
-            client2
+            client
                 .request(request)
                 .and_then(move |res| {
                     let status = res.status();
