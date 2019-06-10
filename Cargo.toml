@@ -17,6 +17,7 @@ indicatif = "^0.11.0"
 chrono = "^0.4.6"
 terminal_size = "^0.1.8"
 itertools = "^0.8.0"
+regex = "^1.1.7"
 
 [dependencies.clap]
 version = "^2.33"
