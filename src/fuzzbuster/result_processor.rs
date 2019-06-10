@@ -77,7 +77,6 @@ impl FuzzScanProcessor {
         }
 
         false
-
     }
 
     pub fn save_fuzz_results(self, path: &str) {

@@ -12,8 +12,8 @@ use std::{str::FromStr, sync::mpsc::channel, thread, time::SystemTime};
 mod banner;
 mod dirbuster;
 mod dnsbuster;
-mod vhostbuster;
 mod fuzzbuster;
+mod vhostbuster;
 
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
@@ -25,17 +25,20 @@ use dnsbuster::{
     utils::*,
     DnsConfig,
 };
+use fuzzbuster::FuzzBuster;
 use vhostbuster::{
     result_processor::{SingleVhostScanResult, VhostScanResult},
     utils::*,
     VhostConfig,
 };
-use fuzzbuster::{
-    FuzzBuster,
-};
 
 fn main() {
-    if std::env::vars().filter(|(name, _value)| name == "RUST_LOG").collect::<Vec<(String, String)>>().len() == 0 {
+    if std::env::vars()
+        .filter(|(name, _value)| name == "RUST_LOG")
+        .collect::<Vec<(String, String)>>()
+        .len()
+        == 0
+    {
         std::env::set_var("RUST_LOG", "rustbuster=warn");
     }
 
@@ -233,7 +236,11 @@ fn main() {
     let http_method = matches.value_of("http-method").unwrap();
     let http_body = matches.value_of("http-body").unwrap();
     let url = matches.value_of("url").unwrap();
-    let wordlist_paths = matches.values_of("wordlist").unwrap().map(|w| w.to_owned()).collect::<Vec<String>>();
+    let wordlist_paths = matches
+        .values_of("wordlist")
+        .unwrap()
+        .map(|w| w.to_owned())
+        .collect::<Vec<String>>();
     let mode = matches.value_of("mode").unwrap();
     let ignore_certificate = matches.is_present("ignore-certificate");
     let mut no_banner = matches.is_present("no-banner");
@@ -316,39 +323,43 @@ fn main() {
         None => None,
     };
     let csrf_headers: Option<Vec<(String, String)>> = if matches.is_present("csrf-header") {
-        Some(matches
-            .values_of("csrf-header")
-            .unwrap()
-            .map(|h| dirbuster::utils::split_http_headers(h))
-            .collect())
+        Some(
+            matches
+                .values_of("csrf-header")
+                .unwrap()
+                .map(|h| dirbuster::utils::split_http_headers(h))
+                .collect(),
+        )
     } else {
         None
     };
 
     match url.parse::<hyper::Uri>() {
         Err(e) => {
-            error!("Invalid URL: {}, consider adding a protocol like http:// or https://", e);
+            error!(
+                "Invalid URL: {}, consider adding a protocol like http:// or https://",
+                e
+            );
             return;
         }
-        Ok(v) => {
-            match v.scheme_part() {
-                Some(s) => {
-                    if s != "http" && s != "https" {
-                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
-                        return;
-                    }
-                },
-                None => {
-                    if mode != "dns" {
-                        error!("Invalid URL: missing protocol, consider adding http:// or https://");
-                        return;
-                    }
-                },
+        Ok(v) => match v.scheme_part() {
+            Some(s) => {
+                if s != "http" && s != "https" {
+                    error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
+                    return;
+                }
+            }
+            None => {
+                if mode != "dns" {
+                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                    return;
+                }
             }
         },
     }
 
-    let all_wordlists_exist = wordlist_paths.iter()
+    let all_wordlists_exist = wordlist_paths
+        .iter()
         .map(|wordlist_path| {
             if std::fs::metadata(wordlist_path).is_err() {
                 error!("Specified wordlist does not exist: {}", wordlist_path);
@@ -358,7 +369,7 @@ fn main() {
             }
         })
         .fold(true, |acc, e| acc && e);
-    
+
     if !all_wordlists_exist {
         return;
     }
@@ -752,7 +763,7 @@ fn main() {
             debug!("FuzzBuster {:#?}", fuzzbuster);
 
             fuzzbuster.run();
-        },
+        }
         _ => (),
     }
 }
