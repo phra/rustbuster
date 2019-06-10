@@ -227,34 +227,45 @@ impl FuzzBuster {
                     .expect("Request builder");
                 let csrf_regex = request.csrf_regex.clone();
                 let csrf_regex = &csrf_regex.expect("Missing regex");
-                let re = Regex::new(&csrf_regex).expect("Invalid regex");
-
-                futures::future::Either::B(client
-                    .request(hyper_request)
-                    .and_then(|res| {
-                        res.into_body().concat2()
-                    })
-                    .join3(
-                        futures::future::ok(re),
-                        futures::future::ok(request),
-                        )
-                    .and_then(|(body, re, request)| {
-                        let vec = body.iter().cloned().collect();
-                        let body = String::from_utf8(vec).unwrap();
-                        match re.captures_iter(&body).take(1).next() {
-                            Some(v) => Ok((Some(v[1].to_owned()), request)),
-                            None => {
-                                warn!("no match for csrf regex");
-                                Ok((None, request))
-                            },
-                        }
-                    }))
+                match Regex::new(&csrf_regex) {
+                    Ok(re) => {
+                        futures::future::Either::B(client
+                            .request(hyper_request)
+                            .and_then(|res| {
+                                res.into_body().concat2()
+                            })
+                            .join3(
+                                futures::future::ok(re),
+                                futures::future::ok(request),
+                                )
+                            .and_then(|(body, re, request)| {
+                                let vec = body.iter().cloned().collect();
+                                let body = String::from_utf8(vec).unwrap();
+                                match re.captures_iter(&body).take(1).next() {
+                                    Some(v) => {
+                                        Ok((Some(v[1].to_owned()), request))
+                                    }
+                                    None => {
+                                        warn!("no match for csrf regex");
+                                        Ok((None, request))
+                                    },
+                                }
+                            }))
+                    },
+                    Err(e) => {
+                        error!("Invalid regex: {}", e);
+                        std::process::exit(-1);
+                    }
+                }
             },
         };
 
         csrf_fut.and_then(move |(csrf, request)| {
             let request = match csrf {
-                Some(v) => FuzzBuster::replace_csrf(request, v),
+                Some(v) => {
+                    trace!("csrf: {}", v);
+                    FuzzBuster::replace_csrf(request, v)
+                },
                 _ => request,
             };
 

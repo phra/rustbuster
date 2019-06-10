@@ -203,6 +203,28 @@ fn main() {
                 .conflicts_with("ignore-string")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("csrf-url")
+                .long("csrf-url")
+                .help("Grabs the CSRF token via GET to csrf-url")
+                .requires("csrf-regex")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("csrf-regex")
+                .long("csrf-regex")
+                .help("Grabs the CSRF token applying the specified RegEx")
+                .requires("csrf-url")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("csrf-header")
+                .long("csrf-header")
+                .help("Adds the specified headers to CSRF GET request")
+                .requires("csrf-url")
+                .multiple(true)
+                .takes_value(true),
+        )
         .get_matches();
 
     let domain = matches.value_of("domain").unwrap_or("");
