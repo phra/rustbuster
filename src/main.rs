@@ -285,6 +285,23 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
     let output = matches.value_of("output").unwrap();
+    let csrf_url = match matches.value_of("csrf-url") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+    let csrf_regex = match matches.value_of("csrf-regex") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+    let csrf_headers: Option<Vec<(String, String)>> = if matches.is_present("csrf-header") {
+        Some(matches
+            .values_of("csrf-header")
+            .unwrap()
+            .map(|h| dirbuster::utils::split_http_headers(h))
+            .collect())
+    } else {
+        None
+    };
 
     match url.parse::<hyper::Uri>() {
         Err(e) => {
@@ -705,9 +722,9 @@ fn main() {
                 output: output.to_owned(),
                 include_body: include_strings,
                 ignore_body: ignore_strings,
-                csrf_url: "".to_owned(),
-                csrf_regex: "".to_owned(),
-                csrf_headers: vec!(),
+                csrf_url,
+                csrf_regex,
+                csrf_headers,
             };
 
             debug!("FuzzBuster {:#?}", fuzzbuster);
