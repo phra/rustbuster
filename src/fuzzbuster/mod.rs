@@ -12,7 +12,8 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 pub mod result_processor;
-mod utils;
+mod spec;
+pub mod utils;
 
 use result_processor::{FuzzScanProcessor, FuzzScanProcessorConfig, SingleFuzzScanResult};
 
@@ -44,7 +45,7 @@ pub struct FuzzBuster {
     pub csrf_headers: Option<Vec<(String, String)>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuzzRequest {
     pub uri: hyper::Uri,
     pub http_method: String,
@@ -310,6 +311,11 @@ impl FuzzBuster {
                 tx_err2.send(target_err2).unwrap_or_else(|_| ());
                 Ok(())
             })
+    }
+
+    #[cfg(test)]
+    pub fn build_requests_test(&self) -> Vec<FuzzRequest> {
+        self.build_requests()
     }
 
     fn build_requests(&self) -> Vec<FuzzRequest> {
