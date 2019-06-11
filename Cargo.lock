@@ -255,6 +255,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "galvanic-assert"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "galvanic-test"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "h2"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -809,6 +819,8 @@ dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)",
+ "galvanic-assert 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "galvanic-test 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.12.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-tls 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "indicatif 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1286,6 +1298,8 @@ dependencies = [
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.27 (registry+https://github.com/rust-lang/crates.io-index)" = "a2037ec1c6c1c4f79557762eab1f7eae1f64f6cb418ace90fae88f0942b60139"
 "checksum futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
+"checksum galvanic-assert 0.8.7 (registry+https://github.com/rust-lang/crates.io-index)" = "3afb916c829538b4f18402c9d0be7484a6f5539442e19ed67ddfb7782604bb40"
+"checksum galvanic-test 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6e6ec93b2f388dcd1102437036da399ae305e9c6cdd4e213260f5ddb6005907a"
 "checksum h2 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)" = "1e42e3daed5a7e17b12a0c23b5b2fbff23a925a570938ebee4baca1a9a1a2240"
 "checksum http 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "eed324f0f0daf6ec10c474f150505af2c143f251722bf9dbd1261bd1f2ee2c1a"
 "checksum http-body 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6741c859c1b2463a423a1dbce98d418e6c3c3fc720fb0d45528657320920292d"
