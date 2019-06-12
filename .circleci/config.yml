@@ -113,12 +113,8 @@ workflows:
             - print_version
             - build
             - build_release
-            - fmt:
-                requires:
-                    - build
-            - check:
-                requires:
-                    - build
+            - fmt
+            - check
             - test:
                 requires:
                     - build
