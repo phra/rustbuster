@@ -114,6 +114,12 @@ jobs:
                 at: /tmp
             - run: cargo test
 
+    test_release:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo test --release
     bench:
         <<: *defaults
         steps:
@@ -154,6 +160,9 @@ workflows:
             - bench:
                 requires:
                     - build_release
+            - test_release:
+                requires:
+                    - build_release
             - deploy:
                 requires:
                     - build
@@ -161,6 +170,7 @@ workflows:
                     - fmt
                     - check
                     - test
+                    - test_release
                     - bench
                 filters:
                     branches:
