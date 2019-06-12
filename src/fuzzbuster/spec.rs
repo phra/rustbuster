@@ -153,6 +153,54 @@ test_suite! {
         }
     }
 
+    fixture fuzzrequest_csrf_body() -> crate::fuzzbuster::FuzzRequest {
+        setup(&mut self) {
+            crate::fuzzbuster::FuzzRequest {
+                uri: "http://localhost/".parse::<hyper::Uri>().unwrap(),
+                http_method: "GET".to_owned(),
+                http_headers: vec![],
+                http_body: "CSRFCSRF".to_owned(),
+                user_agent: "ua".to_owned(),
+                payload: vec!["1".to_owned()],
+                csrf_uri: Some("http://localhost/".parse::<hyper::Uri>().unwrap()),
+                csrf_regex: Some("(\\w+)".to_owned()),
+                csrf_headers: None,
+            }
+        }
+    }
+
+    fixture fuzzrequest_csrf_header() -> crate::fuzzbuster::FuzzRequest {
+        setup(&mut self) {
+            crate::fuzzbuster::FuzzRequest {
+                uri: "http://localhost/".parse::<hyper::Uri>().unwrap(),
+                http_method: "GET".to_owned(),
+                http_headers: vec![("X-CSRF-Token".to_owned(), "CSRFCSRF".to_owned())],
+                http_body: "body".to_owned(),
+                user_agent: "ua".to_owned(),
+                payload: vec!["1".to_owned()],
+                csrf_uri: Some("http://localhost/".parse::<hyper::Uri>().unwrap()),
+                csrf_regex: Some("(\\w+)".to_owned()),
+                csrf_headers: None,
+            }
+        }
+    }
+
+    fixture fuzzrequest_csrf_url() -> crate::fuzzbuster::FuzzRequest {
+        setup(&mut self) {
+            crate::fuzzbuster::FuzzRequest {
+                uri: "http://localhost/CSRFCSRF".parse::<hyper::Uri>().unwrap(),
+                http_method: "GET".to_owned(),
+                http_headers: vec![],
+                http_body: "body".to_owned(),
+                user_agent: "ua".to_owned(),
+                payload: vec!["1".to_owned()],
+                csrf_uri: Some("http://localhost/".parse::<hyper::Uri>().unwrap()),
+                csrf_regex: Some("(\\w+)".to_owned()),
+                csrf_headers: None,
+            }
+        }
+    }
+
     test example_passing_test() {
         assert_eq!(6, 6);
     }
@@ -226,5 +274,24 @@ test_suite! {
         let header = "Header: Value";
         let expected = ("Header".to_owned(), "Value".to_owned());
         assert_eq!(expected, crate::fuzzbuster::utils::split_http_headers(header));
+    }
+
+    test replace_csrf_body(fuzzrequest_csrf_body) {
+        let request = fuzzrequest_csrf_body.val;
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        assert_eq!("VALUE", actual.http_body);
+    }
+
+    test replace_csrf_header(fuzzrequest_csrf_header) {
+        let request = fuzzrequest_csrf_header.val;
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        let expected = vec![("X-CSRF-Token".to_owned(), "VALUE".to_owned())];
+        assert_eq!(expected, actual.http_headers);
+    }
+
+    test replace_csrf_url(fuzzrequest_csrf_url) {
+        let request = fuzzrequest_csrf_url.val;
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        assert_eq!("/VALUE", actual.uri.path());
     }
 }
