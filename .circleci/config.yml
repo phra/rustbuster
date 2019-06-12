@@ -52,7 +52,7 @@ build_release: &build_release
                 - target
             key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
 
-      - persist_to_workspace:
+        - persist_to_workspace:
             root: /tmp
             paths:
                 - repo
