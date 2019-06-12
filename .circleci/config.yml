@@ -3,8 +3,8 @@ defaults: &defaults
     docker:
         # specify the version you desire here
         - image: rust:1
-            environment:
-                SAMPLE: "VARIABLE"
+          environment:
+            SAMPLE: "VARIABLE"
 
 version: &version
     name: Sample command to run before
