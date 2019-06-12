@@ -129,19 +129,19 @@ workflows:
         jobs:
             - checkout
             - print_version
-            - build
+            - build:
                 requires:
                     - checkout
-            - build_release
+            - build_release:
                 requires:
                     - checkout
-            - fmt
+            - fmt:
                 requires:
                     - checkout
-            - check
+            - check:
                 requires:
                     - checkout
-            - clippy
+            - clippy:
                 requires:
                     - checkout
             - test:
