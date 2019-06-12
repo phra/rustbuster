@@ -77,6 +77,7 @@ jobs:
         steps:
             - attach_workspace:
                 at: /tmp
+            - run: rustup component add rustfmt
             - run: cargo fmt
 
     check:
