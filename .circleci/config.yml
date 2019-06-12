@@ -80,6 +80,14 @@ jobs:
             - run: rustup component add rustfmt
             - run: cargo fmt
 
+    clippy:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: rustup component add clippy
+            - run: cargo clippy
+
     check:
         <<: *defaults
         steps:
@@ -116,6 +124,7 @@ workflows:
             - build_release
             - fmt
             - check
+            - clippy
             - test:
                 requires:
                     - build
