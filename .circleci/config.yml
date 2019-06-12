@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 defaults: &defaults
     working_directory: /tmp/repo
@@ -8,7 +8,7 @@ defaults: &defaults
     environment:
         SAMPLE: "VARIABLE"
 
-version: &version
+print_version: &print_version
     name: Sample command to run before
     command: |
         rustc --version
@@ -60,8 +60,8 @@ build_release: &build_release
                 - repo
 
 jobs:
-    version:
-        <<: *version
+    print_version:
+        <<: *print_version
 
     build:
         <<: *build
@@ -107,7 +107,7 @@ workflows:
     version: 2
     test:
         jobs:
-            - version
+            - print_version
             - build
             - build_release
             - fmt:
