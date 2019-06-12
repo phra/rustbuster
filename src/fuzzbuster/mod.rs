@@ -313,7 +313,7 @@ impl FuzzBuster {
             })
     }
 
-    #[cfg(test)]
+    // #[cfg(test)]
     pub fn build_requests_test(&self) -> Vec<FuzzRequest> {
         self.build_requests()
     }
@@ -403,7 +403,7 @@ impl FuzzBuster {
         requests
     }
 
-    #[cfg(test)]
+    // #[cfg(test)]
     pub fn replace_csrf_test(request: FuzzRequest, csrf: String) -> FuzzRequest {
         FuzzBuster::replace_csrf(request, csrf)
     }
