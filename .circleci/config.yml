@@ -9,8 +9,8 @@ defaults: &defaults
         SAMPLE: "VARIABLE"
 
 print_version: &print_version
-    name: Sample command to run before
-    command: |
+    description: Print toolchain versions
+    shell: |
         rustc --version
         cargo --version
         rustup --version
