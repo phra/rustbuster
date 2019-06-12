@@ -55,9 +55,9 @@ fn get_fuzzrequest_url() -> FuzzRequest {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("replace_csrf_body", |b| b.iter(|| FuzzBuster::replace_csrf_test(black_box(get_fuzzrequest_body()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_header", |b| b.iter(|| FuzzBuster::replace_csrf_test(black_box(get_fuzzrequest_header()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_url", |b| b.iter(|| FuzzBuster::replace_csrf_test(black_box(get_fuzzrequest_url()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_body", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_body()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_header", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_header()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_url", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_url()), black_box("VALUE".to_owned()))));
 }
 
 criterion_group!(benches, criterion_benchmark);
