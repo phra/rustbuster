@@ -12,8 +12,8 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 pub mod result_processor;
-mod spec;
 pub mod utils;
+mod spec;
 
 use result_processor::{FuzzScanProcessor, FuzzScanProcessorConfig, SingleFuzzScanResult};
 
@@ -313,12 +313,7 @@ impl FuzzBuster {
             })
     }
 
-    // #[cfg(test)]
-    pub fn build_requests_test(&self) -> Vec<FuzzRequest> {
-        self.build_requests()
-    }
-
-    fn build_requests(&self) -> Vec<FuzzRequest> {
+    pub fn build_requests(&self) -> Vec<FuzzRequest> {
         debug!("building requests");
         let mut requests: Vec<FuzzRequest> = Vec::new();
         let wordlists_iter = self
@@ -403,12 +398,7 @@ impl FuzzBuster {
         requests
     }
 
-    // #[cfg(test)]
-    pub fn replace_csrf_test(request: FuzzRequest, csrf: String) -> FuzzRequest {
-        FuzzBuster::replace_csrf(request, csrf)
-    }
-
-    fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
+    pub fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
         let mut p = request;
         p.uri = p
             .uri

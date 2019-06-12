@@ -211,7 +211,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_url_single(fuzzbuster_url_single()) {
-        let requests = fuzzbuster_url_single.val.build_requests_test();
+        let requests = fuzzbuster_url_single.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/1".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/2".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -220,7 +220,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_url_multiple(fuzzbuster_url_multiple()) {
-        let requests = fuzzbuster_url_multiple.val.build_requests_test();
+        let requests = fuzzbuster_url_multiple.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/1/1".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/1/2".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -231,7 +231,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_header_single(fuzzbuster_header_single()) {
-        let requests = fuzzbuster_header_single.val.build_requests_test();
+        let requests = fuzzbuster_header_single.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "1".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "2".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -240,7 +240,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_header_multiple(fuzzbuster_header_multiple()) {
-        let requests = fuzzbuster_header_multiple.val.build_requests_test();
+        let requests = fuzzbuster_header_multiple.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("1".to_owned(), "1".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("1".to_owned(), "2".to_owned())], http_body: "body".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -251,7 +251,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_body_single(fuzzbuster_body_single()) {
-        let requests = fuzzbuster_body_single.val.build_requests_test();
+        let requests = fuzzbuster_body_single.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "1".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "2".to_owned(), user_agent: "ua".to_owned(), payload: vec!["2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -260,7 +260,7 @@ test_suite! {
     }
 
     test build_requests_fuzz_body_multiple(fuzzbuster_body_multiple()) {
-        let requests = fuzzbuster_body_multiple.val.build_requests_test();
+        let requests = fuzzbuster_body_multiple.val.build_requests();
         let expected: Vec<crate::fuzzbuster::FuzzRequest> = vec![
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "1:1".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "1".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
             crate::fuzzbuster::FuzzRequest { uri: "http://localhost/".parse::<hyper::Uri>().unwrap(), http_method: "GET".to_owned(), http_headers: vec![("Header".to_owned(), "Value".to_owned())], http_body: "1:2".to_owned(), user_agent: "ua".to_owned(), payload: vec!["1".to_owned(), "2".to_owned()], csrf_uri: None, csrf_regex: None, csrf_headers: None },
@@ -278,20 +278,20 @@ test_suite! {
 
     test replace_csrf_body(fuzzrequest_csrf_body) {
         let request = fuzzrequest_csrf_body.val;
-        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf(request, "VALUE".to_owned());
         assert_eq!("VALUE", actual.http_body);
     }
 
     test replace_csrf_header(fuzzrequest_csrf_header) {
         let request = fuzzrequest_csrf_header.val;
-        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf(request, "VALUE".to_owned());
         let expected = vec![("X-CSRF-Token".to_owned(), "VALUE".to_owned())];
         assert_eq!(expected, actual.http_headers);
     }
 
     test replace_csrf_url(fuzzrequest_csrf_url) {
         let request = fuzzrequest_csrf_url.val;
-        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf_test(request, "VALUE".to_owned());
+        let actual = crate::fuzzbuster::FuzzBuster::replace_csrf(request, "VALUE".to_owned());
         assert_eq!("/VALUE", actual.uri.path());
     }
 }
