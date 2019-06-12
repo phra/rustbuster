@@ -9,11 +9,14 @@ defaults: &defaults
         SAMPLE: "VARIABLE"
 
 print_version: &print_version
-    name: Print toolchain versions
-    command: |
-        rustc --version
-        cargo --version
-        rustup --version
+    <<: *defaults
+    steps:
+        - run:
+            name: Print toolchain versions
+            command: |
+                rustc --version
+                cargo --version
+                rustup --version
 
 build: &build
     <<: *defaults
