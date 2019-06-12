@@ -7,8 +7,8 @@ extern crate log;
 // mod fuzzbuster;
 // use fuzzbuster::{FuzzBuster, FuzzRequest};
 
-use criterion::Criterion;
 use criterion::black_box;
+use criterion::Criterion;
 
 use librustbuster::fuzzbuster::{FuzzBuster, FuzzRequest};
 
@@ -85,7 +85,10 @@ fn fuzzbuster_url_multiple() -> FuzzBuster {
         http_body: "body".to_owned(),
         user_agent: "ua".to_owned(),
         http_headers: vec![("Header".to_owned(), "Value".to_owned())],
-        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        wordlist_paths: vec![
+            "./examples/wordlist_short".to_owned(),
+            "./examples/wordlist_short".to_owned(),
+        ],
         url: "http://localhost/FUZZ/FUZZ".to_owned(),
         include_status_codes: vec![],
         ignore_status_codes: vec!["404".to_owned()],
@@ -131,7 +134,10 @@ fn fuzzbuster_header_multiple() -> FuzzBuster {
         http_body: "body".to_owned(),
         user_agent: "ua".to_owned(),
         http_headers: vec![("FUZZ".to_owned(), "FUZZ".to_owned())],
-        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        wordlist_paths: vec![
+            "./examples/wordlist_short".to_owned(),
+            "./examples/wordlist_short".to_owned(),
+        ],
         url: "http://localhost/".to_owned(),
         include_status_codes: vec![],
         ignore_status_codes: vec!["404".to_owned()],
@@ -177,7 +183,10 @@ fn fuzzbuster_body_multiple() -> FuzzBuster {
         http_body: "FUZZ:FUZZ".to_owned(),
         user_agent: "ua".to_owned(),
         http_headers: vec![("Header".to_owned(), "Value".to_owned())],
-        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        wordlist_paths: vec![
+            "./examples/wordlist_short".to_owned(),
+            "./examples/wordlist_short".to_owned(),
+        ],
         url: "http://localhost/".to_owned(),
         include_status_codes: vec![],
         ignore_status_codes: vec!["404".to_owned()],
@@ -193,15 +202,42 @@ fn fuzzbuster_body_multiple() -> FuzzBuster {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("replace_csrf_body", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_body()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_header", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_header()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_url", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_url()), black_box("VALUE".to_owned()))));
-    c.bench_function("build_requests_url_single", |b| b.iter(|| fuzzbuster_url_single().build_requests()));
-    c.bench_function("build_requests_url_multiple", |b| b.iter(|| fuzzbuster_url_multiple().build_requests()));
-    c.bench_function("build_requests_header_single", |b| b.iter(|| fuzzbuster_header_single().build_requests()));
-    c.bench_function("build_requests_header_multiple", |b| b.iter(|| fuzzbuster_header_multiple().build_requests()));
-    c.bench_function("build_requests_body_single", |b| b.iter(|| fuzzbuster_body_single().build_requests()));
-    c.bench_function("build_requests_body_multiple", |b| b.iter(|| fuzzbuster_body_multiple().build_requests()));
+    c.bench_function("replace_csrf_body", |b| {
+        b.iter(|| {
+            FuzzBuster::replace_csrf(black_box(fuzzrequest_body()), black_box("VALUE".to_owned()))
+        })
+    });
+    c.bench_function("replace_csrf_header", |b| {
+        b.iter(|| {
+            FuzzBuster::replace_csrf(
+                black_box(fuzzrequest_header()),
+                black_box("VALUE".to_owned()),
+            )
+        })
+    });
+    c.bench_function("replace_csrf_url", |b| {
+        b.iter(|| {
+            FuzzBuster::replace_csrf(black_box(fuzzrequest_url()), black_box("VALUE".to_owned()))
+        })
+    });
+    c.bench_function("build_requests_url_single", |b| {
+        b.iter(|| fuzzbuster_url_single().build_requests())
+    });
+    c.bench_function("build_requests_url_multiple", |b| {
+        b.iter(|| fuzzbuster_url_multiple().build_requests())
+    });
+    c.bench_function("build_requests_header_single", |b| {
+        b.iter(|| fuzzbuster_header_single().build_requests())
+    });
+    c.bench_function("build_requests_header_multiple", |b| {
+        b.iter(|| fuzzbuster_header_multiple().build_requests())
+    });
+    c.bench_function("build_requests_body_single", |b| {
+        b.iter(|| fuzzbuster_body_single().build_requests())
+    });
+    c.bench_function("build_requests_body_multiple", |b| {
+        b.iter(|| fuzzbuster_body_multiple().build_requests())
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

@@ -12,8 +12,8 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 pub mod result_processor;
-pub mod utils;
 mod spec;
+pub mod utils;
 
 use result_processor::{FuzzScanProcessor, FuzzScanProcessorConfig, SingleFuzzScanResult};
 
