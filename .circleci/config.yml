@@ -18,11 +18,18 @@ print_version: &print_version
                 cargo --version
                 rustup --version
 
-build: &build
+checkout: &checkout
     <<: *defaults
     steps:
         - checkout
+        - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
 
+build: &build
+    <<: *defaults
+    steps:
         - restore_cache:
             keys:
                 - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
@@ -43,8 +50,6 @@ build: &build
 build_release: &build_release
     <<: *defaults
     steps:
-        - checkout
-
         - restore_cache:
             keys:
                 - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
@@ -63,6 +68,9 @@ build_release: &build_release
                 - repo
 
 jobs:
+    checkout:
+        <<: *checkout
+
     print_version:
         <<: *print_version
 
@@ -119,12 +127,23 @@ workflows:
     version: 2
     test:
         jobs:
+            - checkout
             - print_version
             - build
+                requires:
+                    - checkout
             - build_release
+                requires:
+                    - checkout
             - fmt
+                requires:
+                    - checkout
             - check
+                requires:
+                    - checkout
             - clippy
+                requires:
+                    - checkout
             - test:
                 requires:
                     - build
