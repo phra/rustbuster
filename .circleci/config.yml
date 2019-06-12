@@ -23,14 +23,14 @@ build: &build
                 - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
                 - v1-dependencies-rust-
 
-      - run: cargo build
+        - run: cargo build
 
-      - save_cache:
+        - save_cache:
             paths:
                 - target
             key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
 
-      - persist_to_workspace:
+        - persist_to_workspace:
             root: /tmp
             paths:
                 - repo
