@@ -1,213 +1,136 @@
-version: 2.1
-description: Common CI tasks for building and testing Rust crates.
-
-executors:
-  default:
-    description: Executor environment for building Rust crates.
+defaults: &defaults
+    working_directory: /tmp/repo
     docker:
-      - image: rust:1
+        # specify the version you desire here
+        - image: rust:1
+            environment:
+                SAMPLE: "VARIABLE"
 
-commands:
-  checkout_with_submodules:
-    description: Check out source code and submodules.
-    steps:
-      - checkout
-      - run:
-          name: Checkout submodules
-          command: |
-            git submodule sync
-            git submodule update --init
+version: &version
+    name: Sample command to run before
+    command: |
+        rustc --version
+        cargo --version
+        rustup --version
 
-  update_toolchain:
-    description: Update the Rust toolchain to use for building.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
+build: &build
+    <<: *defaults
     steps:
-      - run:
-          name: Update toolchain
-          command: |
-            test -z "<<parameters.toolchain>>" || echo "<<parameters.toolchain>>" >rust-toolchain
-            rustup show active-toolchain
-      - run:
-          name: Version information
-          command: |
-            rustup --version
-            rustc --version
-            cargo --version
+        - checkout
 
-  check:
-    description: Run compiler checks on all targets of a Rust crate.
-    steps:
-      - run:
-          name: Calculate dependencies
-          command: test -e Cargo.lock || cargo generate-lockfile
-      - run:
-          name: Run compiler checks
-          command: cargo check --all --all-targets
+        - restore_cache:
+            keys:
+                - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+                - v1-dependencies-rust-
 
-  clippy:
-    description: Run clippy checks on all targets of a Rust crate.
-    steps:
-      - run:
-          name: Calculate dependencies
-          command: test -e Cargo.lock || cargo generate-lockfile
-      - run:
-          name: Run clippy checks
-          command: |
-            if rustup component add clippy; then
-              cargo clippy --all --all-targets -- -Dwarnings -Drust-2018-idioms
-            else
-              echo Skipping clippy
-            fi
+      - run: cargo build
 
-  format:
-    description: Check formatting of all sources of a Rust crate.
-    steps:
-      - run:
-          name: Calculate dependencies
-          command: test -e Cargo.lock || cargo generate-lockfile
-      - run:
-          name: Check formatting
-          command: |
-            if rustup component add rustfmt; then
-              cargo fmt --all -- --check
-            else
-              echo Skipping rustfmt
-            fi
-
-  build:
-    description: Build all targets of a Rust crate.
-    parameters:
-      release:
-        description: By default, the crate is build in debug mode without optimizations. Set this to true to compile in release mode.
-        type: boolean
-        default: false
-    steps:
-      - run:
-          name: Calculate dependencies
-          command: |
-            rustc --version >rust-version
-            test -e Cargo.lock || cargo generate-lockfile
-      - restore_cache:
-          keys:
-            - v6-cargo-cache-{{arch}}-{{checksum "rust-version"}}-<<parameters.release>>-{{checksum "Cargo.lock"}}
-      - run:
-          name: Build all targets
-          command: cargo build --all --all-targets<<#parameters.release>> --release<</parameters.release>>
       - save_cache:
-          paths:
-            - /usr/local/cargo/registry
-            - target
-          key: v6-cargo-cache-{{arch}}-{{checksum "rust-version"}}-<<parameters.release>>-{{checksum "Cargo.lock"}}
+            paths:
+                - target
+            key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
 
-  test:
-    description: Run all tests of a Rust crate. Make sure to build first.
-    parameters:
-      release:
-        description: By default, the crate is build in debug mode without optimizations. Set this to true to compile in release mode.
-        type: boolean
-        default: false
+      - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
+
+build_release: &build_release
+    <<: *defaults
     steps:
-      - run:
-          name: Run all tests
-          command: cargo test --all<<#parameters.release>> --release<</parameters.release>>
+        - checkout
 
-  bench:
-    description: Run all benches of a Rust crate. Make sure to build first.
-    parameters:
-      release:
-        description: By default, the crate is build in debug mode without optimizations. Set this to true to compile in release mode.
-        type: boolean
-        default: true
-    steps:
-      - run:
-          name: Run all benches
-          command: cargo bench --all<<#parameters.release>> --release<</parameters.release>>
+        - restore_cache:
+            keys:
+                - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+                - v1-dependencies-rust-
 
+        - run: cargo build --release
+
+        - save_cache:
+            paths:
+                - target
+            key: v1-dependencies-rust-{{ checksum "Cargo.toml" }}
+
+      - persist_to_workspace:
+            root: /tmp
+            paths:
+                - repo
+
+version: 2
 jobs:
-  check:
-    description: Run compiler checks on a Rust crate.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
-    executor: default
-    steps:
-      - checkout_with_submodules
-      - update_toolchain:
-          toolchain: <<parameters.toolchain>>
-      - check
+    version:
+        <<: *version
 
-  clippy:
-    description: Run clippy checks on a Rust crate.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
-    executor: default
-    steps:
-      - checkout_with_submodules
-      - update_toolchain:
-          toolchain: <<parameters.toolchain>>
-      - clippy
+    build:
+        <<: *build
 
-  format:
-    description: Check formatting of a Rust crate.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
-    executor: default
-    steps:
-      - checkout_with_submodules
-      - update_toolchain:
-          toolchain: <<parameters.toolchain>>
-      - format
+    build_release:
+        <<: *build_release
 
-  test:
-    description: Builds a Rust crate and runs all tests.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
-      release:
-        description: By default, the crate is build in debug mode without optimizations. Set this to true to compile in release mode.
-        type: boolean
-        default: false
-    executor: default
-    steps:
-      - checkout_with_submodules
-      - update_toolchain:
-          toolchain: <<parameters.toolchain>>
-      - build:
-          release: <<parameters.release>>
-      - test:
-          release: <<parameters.release>>
+    fmt:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo fmt
 
-  bench:
-    description: Builds a Rust crate and runs all benches.
-    parameters:
-      toolchain:
-        description: Rust toolchain to use. Overrides the default toolchain (stable) or any toolchain specified in the project via `rust-toolchain`.
-        type: string
-        default: ""
-      release:
-        description: By default, the crate is build in debug mode without optimizations. Set this to true to compile in release mode.
-        type: boolean
-        default: true
-    executor: default
-    steps:
-      - checkout_with_submodules
-      - update_toolchain:
-          toolchain: <<parameters.toolchain>>
-      - build:
-          release: <<parameters.release>>
-      - bench:
-          release: <<parameters.release>>
+    check:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo check
+
+    test:
+        <<: *defaults
+        steps:
+            - run:
+                <<: *install_chrome
+            - attach_workspace:
+                at: /tmp
+            - run: cargo test
+
+    bench:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: cargo bench
+
+    deploy:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: echo todo
+workflows:
+    version: 2
+    test:
+        jobs:
+            - version
+            - build
+            - build_release
+            - fmt:
+                requires:
+                    - build
+            - check:
+                requires:
+                    - build
+            - test:
+                requires:
+                    - build
+            - bench:
+                requires:
+                    - build_release
+            - deploy:
+                requires:
+                    - build
+                    - build_release
+                    - fmt
+                    - check
+                    - test
+                    - bench
+                filters:
+                    branches:
+                        only: master
