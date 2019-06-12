@@ -1,4 +1,4 @@
-version: 2.1
+version: 2
 
 defaults: &defaults
     working_directory: /tmp/repo
@@ -9,8 +9,8 @@ defaults: &defaults
         SAMPLE: "VARIABLE"
 
 print_version: &print_version
-    description: Print toolchain versions
-    shell: |
+    name: Print toolchain versions
+    command: |
         rustc --version
         cargo --version
         rustup --version
