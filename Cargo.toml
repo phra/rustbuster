@@ -11,7 +11,6 @@ path = "src/main.rs"
 [lib]
 name = "librustbuster"
 path = "src/lib.rs"
-bench = true
 
 [dependencies]
 hyper = "^0.12.28"
