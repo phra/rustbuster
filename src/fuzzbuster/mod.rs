@@ -403,20 +403,25 @@ impl FuzzBuster {
         requests
     }
 
+    #[cfg(test)]
+    pub fn replace_csrf_test(request: FuzzRequest, csrf: String) -> FuzzRequest {
+        FuzzBuster::replace_csrf(request, csrf)
+    }
+
     fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
         let mut p = request;
         p.uri = p
             .uri
             .to_string()
-            .replace("CSRF", &csrf)
+            .replace("CSRFCSRF", &csrf)
             .parse::<hyper::Uri>()
             .expect("replace csrf in uri");
         for (header, value) in p.http_headers.iter_mut() {
-            *header = header.replace("CSRF", &csrf);
-            *value = value.replace("CSRF", &csrf);
+            *header = header.replace("CSRFCSRF", &csrf);
+            *value = value.replace("CSRFCSRF", &csrf);
         }
 
-        p.http_body = p.http_body.replace("CSRF", &csrf);
+        p.http_body = p.http_body.replace("CSRFCSRF", &csrf);
         p
     }
 }
