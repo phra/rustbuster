@@ -1,10 +1,12 @@
+version: 2
+
 defaults: &defaults
     working_directory: /tmp/repo
     docker:
         # specify the version you desire here
         - image: rust:1
-    environment:
-        SAMPLE: "VARIABLE"
+            environment:
+                SAMPLE: "VARIABLE"
 
 version: &version
     name: Sample command to run before
@@ -57,7 +59,6 @@ build_release: &build_release
             paths:
                 - repo
 
-version: 2
 jobs:
     version:
         <<: *version
