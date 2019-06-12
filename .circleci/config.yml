@@ -30,6 +30,8 @@ checkout: &checkout
 build: &build
     <<: *defaults
     steps:
+        - attach_workspace:
+            at: /tmp
         - restore_cache:
             keys:
                 - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
@@ -50,6 +52,8 @@ build: &build
 build_release: &build_release
     <<: *defaults
     steps:
+        - attach_workspace:
+            at: /tmp
         - restore_cache:
             keys:
                 - v1-dependencies-rust-{{ checksum "Cargo.toml" }}
