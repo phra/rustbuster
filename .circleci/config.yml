@@ -85,8 +85,6 @@ jobs:
     test:
         <<: *defaults
         steps:
-            - run:
-                <<: *install_chrome
             - attach_workspace:
                 at: /tmp
             - run: cargo test
