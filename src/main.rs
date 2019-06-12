@@ -250,7 +250,7 @@ fn main() {
         matches
             .values_of("http-header")
             .unwrap()
-            .map(|h| dirbuster::utils::split_http_headers(h))
+            .map(|h| fuzzbuster::utils::split_http_headers(h))
             .collect()
     } else {
         Vec::new()
@@ -327,7 +327,7 @@ fn main() {
             matches
                 .values_of("csrf-header")
                 .unwrap()
-                .map(|h| dirbuster::utils::split_http_headers(h))
+                .map(|h| fuzzbuster::utils::split_http_headers(h))
                 .collect(),
         )
     } else {

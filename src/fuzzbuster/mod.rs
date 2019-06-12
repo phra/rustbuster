@@ -12,7 +12,8 @@ use std::sync::mpsc::Sender;
 use std::thread;
 
 pub mod result_processor;
-mod utils;
+mod spec;
+pub mod utils;
 
 use result_processor::{FuzzScanProcessor, FuzzScanProcessorConfig, SingleFuzzScanResult};
 
@@ -44,7 +45,7 @@ pub struct FuzzBuster {
     pub csrf_headers: Option<Vec<(String, String)>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuzzRequest {
     pub uri: hyper::Uri,
     pub http_method: String,
@@ -312,7 +313,7 @@ impl FuzzBuster {
             })
     }
 
-    fn build_requests(&self) -> Vec<FuzzRequest> {
+    pub fn build_requests(&self) -> Vec<FuzzRequest> {
         debug!("building requests");
         let mut requests: Vec<FuzzRequest> = Vec::new();
         let wordlists_iter = self
@@ -397,20 +398,20 @@ impl FuzzBuster {
         requests
     }
 
-    fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
+    pub fn replace_csrf(request: FuzzRequest, csrf: String) -> FuzzRequest {
         let mut p = request;
         p.uri = p
             .uri
             .to_string()
-            .replace("CSRF", &csrf)
+            .replace("CSRFCSRF", &csrf)
             .parse::<hyper::Uri>()
             .expect("replace csrf in uri");
         for (header, value) in p.http_headers.iter_mut() {
-            *header = header.replace("CSRF", &csrf);
-            *value = value.replace("CSRF", &csrf);
+            *header = header.replace("CSRFCSRF", &csrf);
+            *value = value.replace("CSRFCSRF", &csrf);
         }
 
-        p.http_body = p.http_body.replace("CSRF", &csrf);
+        p.http_body = p.http_body.replace("CSRFCSRF", &csrf);
         p
     }
 }
