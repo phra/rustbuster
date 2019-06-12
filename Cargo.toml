@@ -4,6 +4,15 @@ version = "1.2.1"
 authors = ["phra <greensoncio@gmail.com>", "ps1dr3x <michele@federici.tech>"]
 edition = "2018"
 
+[[bin]]
+name = "rustbuster"
+path = "src/main.rs"
+
+[lib]
+name = "librustbuster"
+path = "src/lib.rs"
+bench = true
+
 [dependencies]
 hyper = "^0.12.28"
 pretty_env_logger = "^0.3.0"
@@ -20,6 +29,11 @@ itertools = "^0.8.0"
 regex = "^1.1.7"
 galvanic-test = "^0.2.0"
 galvanic-assert = "0.8.7"
+criterion = "^0.2.11"
+
+[[bench]]
+name = "rustbuster"
+harness = false
 
 [dependencies.clap]
 version = "^2.33"
