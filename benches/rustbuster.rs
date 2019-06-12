@@ -12,7 +12,7 @@ use criterion::black_box;
 
 use librustbuster::fuzzbuster::{FuzzBuster, FuzzRequest};
 
-fn get_fuzzrequest_body() -> FuzzRequest {
+fn fuzzrequest_body() -> FuzzRequest {
     FuzzRequest {
         uri: "http://localhost/".parse::<hyper::Uri>().unwrap(),
         http_method: "GET".to_owned(),
@@ -26,7 +26,7 @@ fn get_fuzzrequest_body() -> FuzzRequest {
     }
 }
 
-fn get_fuzzrequest_header() -> FuzzRequest {
+fn fuzzrequest_header() -> FuzzRequest {
     FuzzRequest {
         uri: "http://localhost/".parse::<hyper::Uri>().unwrap(),
         http_method: "GET".to_owned(),
@@ -40,7 +40,7 @@ fn get_fuzzrequest_header() -> FuzzRequest {
     }
 }
 
-fn get_fuzzrequest_url() -> FuzzRequest {
+fn fuzzrequest_url() -> FuzzRequest {
     FuzzRequest {
         uri: "http://localhost/CSRFCSRF".parse::<hyper::Uri>().unwrap(),
         http_method: "GET".to_owned(),
@@ -54,10 +54,154 @@ fn get_fuzzrequest_url() -> FuzzRequest {
     }
 }
 
+fn fuzzbuster_url_single() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "body".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("Header".to_owned(), "Value".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned()],
+        url: "http://localhost/FUZZ".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
+fn fuzzbuster_url_multiple() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "body".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("Header".to_owned(), "Value".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        url: "http://localhost/FUZZ/FUZZ".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
+fn fuzzbuster_header_single() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "body".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("Header".to_owned(), "FUZZ".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned()],
+        url: "http://localhost/".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
+fn fuzzbuster_header_multiple() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "body".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("FUZZ".to_owned(), "FUZZ".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        url: "http://localhost/".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
+fn fuzzbuster_body_single() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "FUZZ".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("Header".to_owned(), "Value".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned()],
+        url: "http://localhost/".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
+fn fuzzbuster_body_multiple() -> FuzzBuster {
+    FuzzBuster {
+        n_threads: 1,
+        ignore_certificate: true,
+        http_method: "GET".to_owned(),
+        http_body: "FUZZ:FUZZ".to_owned(),
+        user_agent: "ua".to_owned(),
+        http_headers: vec![("Header".to_owned(), "Value".to_owned())],
+        wordlist_paths: vec!["./examples/wordlist_short".to_owned(), "./examples/wordlist_short".to_owned()],
+        url: "http://localhost/".to_owned(),
+        include_status_codes: vec![],
+        ignore_status_codes: vec!["404".to_owned()],
+        include_body: vec![],
+        ignore_body: vec![],
+        no_progress_bar: true,
+        exit_on_connection_errors: false,
+        output: "".to_owned(),
+        csrf_url: None,
+        csrf_regex: None,
+        csrf_headers: None,
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("replace_csrf_body", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_body()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_header", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_header()), black_box("VALUE".to_owned()))));
-    c.bench_function("replace_csrf_url", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(get_fuzzrequest_url()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_body", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_body()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_header", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_header()), black_box("VALUE".to_owned()))));
+    c.bench_function("replace_csrf_url", |b| b.iter(|| FuzzBuster::replace_csrf(black_box(fuzzrequest_url()), black_box("VALUE".to_owned()))));
+    c.bench_function("build_requests_url_single", |b| b.iter(|| fuzzbuster_url_single().build_requests()));
+    c.bench_function("build_requests_url_multiple", |b| b.iter(|| fuzzbuster_url_multiple().build_requests()));
+    c.bench_function("build_requests_header_single", |b| b.iter(|| fuzzbuster_header_single().build_requests()));
+    c.bench_function("build_requests_header_multiple", |b| b.iter(|| fuzzbuster_header_multiple().build_requests()));
+    c.bench_function("build_requests_body_single", |b| b.iter(|| fuzzbuster_body_single().build_requests()));
+    c.bench_function("build_requests_body_multiple", |b| b.iter(|| fuzzbuster_body_multiple().build_requests()));
 }
 
 criterion_group!(benches, criterion_benchmark);
