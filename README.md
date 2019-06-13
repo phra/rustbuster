@@ -4,18 +4,11 @@ DirBuster for Rust
 
 [![asciicast](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU.svg)](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU)
 
+## Download
+
+You can download prebuilt binaries from [here](https://github.com/phra/rustbuster/releases).
+
 ## Usage
-
-There are three modules currently implemented:
-
-1. Dirbuster (default)  
-`rustbuster -m dir -u http://localhost:3000/ -w examples/wordlist -e php`
-
-1. Dnsbuster  
-`rustbuster -m dns -u google.com -w examples/wordlist`
-
-1. Vhostbuster  
-`rustbuster -m vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x "Hello"`
 
 ```shell
 
@@ -34,7 +27,7 @@ There are three modules currently implemented:
 ~ rustbuster v. 1.2.0 ~ by phra & ps1dr3x ~
 
 USAGE:
-    rustbuster [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>
+    rustbuster [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>...
 
 FLAGS:
     -f, --append-slash          Tries to also append / to the base request
@@ -47,19 +40,38 @@ FLAGS:
     -v, --verbose               Sets the level of verbosity
 
 OPTIONS:
+        --csrf-header <csrf-header>...                   Adds the specified headers to CSRF GET request
+        --csrf-regex <csrf-regex>                        Grabs the CSRF token applying the specified RegEx
+        --csrf-url <csrf-url>                            Grabs the CSRF token via GET to csrf-url
     -d, --domain <domain>                                Uses the specified domain
     -e, --extensions <extensions>                        Sets the extensions [default: ]
     -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
     -H, --http-header <http-header>...                   Appends the specified HTTP header
     -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
     -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
-    -x, --ignore-string <ignore-string>...               Ignores results with specified string in vhost mode
+    -x, --ignore-string <ignore-string>...               Ignores results with specified string in the HTTP Body
     -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
+    -i, --include-string <include-string>...             Includes results with specified string in the HTTP body
     -m, --mode <mode>                                    Sets the mode of operation (dir, dns, fuzz) [default: dir]
     -o, --output <output>                                Saves the results in the specified file [default: ]
     -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
     -u, --url <url>                                      Sets the target URL
     -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
-    -w, --wordlist <wordlist>                            Sets the wordlist
+    -w, --wordlist <wordlist>...                         Sets the wordlist
+
+EXAMPLES:
+    1. Dir mode:
+        rustbuster -m dir -u http://localhost:3000/ -w examples/wordlist -e php
+    2. Dns mode:
+        rustbuster -m dns -u google.com -w examples/wordlist
+    3. Vhost mode:
+        rustbuster -m vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x "Hello"
+    4. Fuzz mode:
+        rustbuster -m fuzz -m fuzz -u http://localhost:3000/login -X POST \
+            -H "Content-Type: application/json" \
+            -b '{"user":"FUZZ","password":"FUZZ","csrf":"CSRFCSRF"}' \
+            -w examples/wordlist \
+            -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-10000.txt \
+            -s 200
 
 ```
