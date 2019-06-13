@@ -127,6 +127,18 @@ jobs:
                 at: /tmp
             - run: cargo bench
 
+    bench_master:
+        <<: *defaults
+        steps:
+            - attach_workspace:
+                at: /tmp
+            - run: git checkout master
+            - run: cargo bench
+            - persist_to_workspace:
+                root: /tmp
+                paths:
+                    - repo
+
     deploy:
         <<: *defaults
         steps:
@@ -158,8 +170,12 @@ workflows:
             - test:
                 requires:
                     - build
+            - bench_master:
+                requires:
+                    - build_release
             - bench:
                 requires:
+                    - bench_master
                     - build_release
             - test_release:
                 requires:
