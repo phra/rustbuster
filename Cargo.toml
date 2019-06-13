@@ -1,6 +1,6 @@
 [package]
 name = "rustbuster"
-version = "1.2.1"
+version = "2.0.0"
 authors = ["phra <greensoncio@gmail.com>", "ps1dr3x <michele@federici.tech>"]
 edition = "2018"
 
