@@ -55,7 +55,8 @@ fn main() {
     3. Vhost mode:
         rustbuster -m vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\"
     4. Fuzz mode:
-        rustbuster -m fuzz -m fuzz -u http://localhost:3000/login -X POST \\
+        rustbuster -m fuzz -u http://localhost:3000/login \\
+            -X POST \\
             -H \"Content-Type: application/json\" \\
             -b '{\"user\":\"FUZZ\",\"password\":\"FUZZ\",\"csrf\":\"CSRFCSRF\"}' \\
             -w examples/wordlist \\
