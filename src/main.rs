@@ -47,6 +47,21 @@ fn main() {
         .version(crate_version!())
         .author("by phra & ps1dr3x")
         .about("DirBuster for rust")
+        .after_help("EXAMPLES:
+    1. Dir mode:
+        rustbuster -m dir -u http://localhost:3000/ -w examples/wordlist -e php
+    2. Dns mode:
+        rustbuster -m dns -u google.com -w examples/wordlist
+    3. Vhost mode:
+        rustbuster -m vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\"
+    4. Fuzz mode:
+        rustbuster -m fuzz -m fuzz -u http://localhost:3000/login -X POST \\
+            -H \"Content-Type: application/json\" \\
+            -b '{\"user\":\"FUZZ\",\"password\":\"FUZZ\",\"csrf\":\"CSRFCSRF\"}' \\
+            -w examples/wordlist \\
+            -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-10000.txt \\
+            -s 200
+")
         .arg(
             Arg::with_name("verbose")
                 .long("verbose")
