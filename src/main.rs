@@ -62,6 +62,8 @@ fn main() {
             -w examples/wordlist \\
             -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-10000.txt \\
             -s 200
+            --csrf-url \"http://localhost:3000/csrf\"
+            --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'
 ")
         .arg(
             Arg::with_name("verbose")
