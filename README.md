@@ -24,7 +24,7 @@ You can download prebuilt binaries from [here](https://github.com/phra/rustbuste
 / / /  \ \ \/ / /____\/ /\ \/___/ / /_/ /     / / /__________/ / /____\/ /\ \/___/ / /_/ /     / / /_______/ / /  \ \ \   
 \/_/    \_\/\/_________/  \_____\/  \_\/      \/_____________\/_________/  \_____\/  \_\/      \/__________\/_/    \_\/   
 
-~ rustbuster v. 1.2.0 ~ by phra & ps1dr3x ~
+~ rustbuster v. 2.0.2 ~ by phra & ps1dr3x ~
 
 USAGE:
     rustbuster [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>...
