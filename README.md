@@ -1,4 +1,4 @@
-# rustbuster
+# rustbuster [![CircleCI](https://circleci.com/gh/phra/rustbuster.svg?style=svg)](https://circleci.com/gh/phra/rustbuster)
 
 DirBuster for Rust
 
