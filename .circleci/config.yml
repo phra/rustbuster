@@ -186,6 +186,7 @@ workflows:
                     - build_release
                     - fmt
                     - check
+                    - clippy
                     - test
                     - test_release
                     - bench
