@@ -132,24 +132,27 @@ fn main() {
                 );
                 return;
             }
-            Ok(v) => match v.scheme_part() {
-                Some(s) => {
-                    if s != "http" && s != "https" {
-                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
-                        return;
+            Ok(v) => {
+                match v.scheme_part() {
+                    Some(s) => {
+                        if s != "http" && s != "https" {
+                            error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
+                            return;
+                        }
+                    }
+                    None => {
+                        if mode != "dns" {
+                            error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                            return;
+                        }
                     }
                 }
-                None => {
-                    if mode != "dns" {
-                        error!("Invalid URL: missing protocol, consider adding http:// or https://");
-                        return;
-                    }
-                }
-            },
+            }
         }
     }
 
-    let all_wordlists_exist = common_args.wordlist_paths
+    let all_wordlists_exist = common_args
+        .wordlist_paths
         .iter()
         .map(|wordlist_path| {
             if std::fs::metadata(wordlist_path).is_err() {
@@ -169,7 +172,10 @@ fn main() {
     debug!("Using url: {:?}", common_args.url);
     debug!("Using wordlist: {:?}", common_args.wordlist_paths);
     debug!("Using concurrent requests: {:?}", common_args.n_threads);
-    debug!("Using certificate validation: {:?}", !common_args.ignore_certificate);
+    debug!(
+        "Using certificate validation: {:?}",
+        !common_args.ignore_certificate
+    );
     debug!("Using HTTP headers: {:?}", common_args.http_headers);
     debug!(
         "Using exit on connection errors: {:?}",
@@ -183,7 +189,10 @@ fn main() {
             format!("{:?}", common_args.include_status_codes)
         }
     );
-    debug!("Excluding status codes: {:?}", common_args.ignore_status_codes);
+    debug!(
+        "Excluding status codes: {:?}",
+        common_args.ignore_status_codes
+    );
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -217,12 +226,18 @@ fn main() {
     match mode {
         "dir" => {
             let append_slash = submatches.is_present("append-slash");
-            let extensions = submatches.values_of("extensions")
+            let extensions = submatches
+                .values_of("extensions")
                 .unwrap()
                 .filter(|e| !e.is_empty())
                 .collect::<Vec<&str>>();
             debug!("Using extensions: {:?}", extensions);
-            let urls = build_urls(&common_args.wordlist_paths[0], &common_args.url, extensions, append_slash);
+            let urls = build_urls(
+                &common_args.wordlist_paths[0],
+                &common_args.url,
+                extensions,
+                append_slash,
+            );
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleDirScanResult>();
             let config = DirConfig {
@@ -274,7 +289,8 @@ fn main() {
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors {
+                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors
+                        {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -331,7 +347,9 @@ fn main() {
             let domains = build_domains(&common_args.wordlist_paths[0], &common_args.url);
             let total_numbers_of_request = domains.len();
             let (tx, rx) = channel::<SingleDnsScanResult>();
-            let config = DnsConfig { n_threads: common_args.n_threads };
+            let config = DnsConfig {
+                n_threads: common_args.n_threads,
+            };
             let mut result_processor = DnsScanResult::new();
 
             let bar = if common_args.no_progress_bar {
@@ -472,7 +490,8 @@ fn main() {
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors {
+                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors
+                        {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -526,17 +545,18 @@ fn main() {
                 Some(v) => Some(v.to_owned()),
                 None => None,
             };
-            let csrf_headers: Option<Vec<(String, String)>> = if submatches.is_present("csrf-header") {
-                Some(
-                    submatches
-                        .values_of("csrf-header")
-                        .unwrap()
-                        .map(|h| fuzzbuster::utils::split_http_headers(h))
-                        .collect(),
-                )
-            } else {
-                None
-            };
+            let csrf_headers: Option<Vec<(String, String)>> =
+                if submatches.is_present("csrf-header") {
+                    Some(
+                        submatches
+                            .values_of("csrf-header")
+                            .unwrap()
+                            .map(|h| fuzzbuster::utils::split_http_headers(h))
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
             let fuzzbuster = FuzzBuster {
                 n_threads: common_args.n_threads,
                 ignore_certificate: common_args.ignore_certificate,
@@ -832,6 +852,6 @@ fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
         ignore_strings,
         include_status_codes,
         ignore_status_codes,
-        output: output.to_owned()
+        output: output.to_owned(),
     }
 }
