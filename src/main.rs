@@ -120,88 +120,11 @@ fn main() {
 
     let mode = matches.subcommand_name().unwrap_or("dir");
     let submatches = matches.subcommand_matches(mode).unwrap();
-    let domain = submatches.value_of("domain").unwrap_or("");
-    let append_slash = submatches.is_present("append-slash");
-    let user_agent = submatches.value_of("user-agent").unwrap();
-    let http_method = submatches.value_of("http-method").unwrap();
-    let http_body = submatches.value_of("http-body").unwrap();
-    let url = submatches.value_of("url").unwrap();
-    let wordlist_paths = submatches
-        .values_of("wordlist")
-        .unwrap()
-        .map(|w| w.to_owned())
-        .collect::<Vec<String>>();
-    let ignore_certificate = submatches.is_present("ignore-certificate");
-    let mut no_banner = submatches.is_present("no-banner");
-    let mut no_progress_bar = submatches.is_present("no-progress-bar");
-    let exit_on_connection_errors = submatches.is_present("exit-on-error");
-    let http_headers: Vec<(String, String)> = if submatches.is_present("http-header") {
-        submatches
-            .values_of("http-header")
-            .unwrap()
-            .map(|h| fuzzbuster::utils::split_http_headers(h))
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let ignore_strings: Vec<String> = if submatches.is_present("ignore-string") {
-        submatches
-            .values_of("ignore-string")
-            .unwrap()
-            .map(|h| h.to_owned())
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let include_strings: Vec<String> = if submatches.is_present("include-string") {
-        submatches
-            .values_of("include-string")
-            .unwrap()
-            .map(|h| h.to_owned())
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let n_threads = submatches
-        .value_of("threads")
-        .unwrap()
-        .parse::<usize>()
-        .expect("threads is a number");
-    let include_status_codes = submatches
-        .values_of("include-status-codes")
-        .unwrap()
-        .filter(|s| {
-            if s.is_empty() {
-                return false;
-            }
-            let valid = hyper::StatusCode::from_str(s).is_ok();
-            if !valid {
-                warn!("Ignoring invalid status code for '-s' param: {}", s);
-            }
-            valid
-        })
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-    let ignore_status_codes = submatches
-        .values_of("ignore-status-codes")
-        .unwrap()
-        .filter(|s| {
-            if s.is_empty() {
-                return false;
-            }
-            let valid = hyper::StatusCode::from_str(s).is_ok();
-            if !valid {
-                warn!("Ignoring invalid status code for '-S' param: {}", s);
-            }
-            valid
-        })
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-    let output = submatches.value_of("output").unwrap();
+    let common_args = extract_common_args(submatches);
 
     if mode != "dns" {
         debug!("mode {}", mode);
-        match url.parse::<hyper::Uri>() {
+        match common_args.url.parse::<hyper::Uri>() {
             Err(e) => {
                 error!(
                     "Invalid URL: {}, consider adding a protocol like http:// or https://",
@@ -226,7 +149,7 @@ fn main() {
         }
     }
 
-    let all_wordlists_exist = wordlist_paths
+    let all_wordlists_exist = common_args.wordlist_paths
         .iter()
         .map(|wordlist_path| {
             if std::fs::metadata(wordlist_path).is_err() {
@@ -243,25 +166,24 @@ fn main() {
     }
 
     debug!("Using mode: {:?}", mode);
-    debug!("Using url: {:?}", url);
-    debug!("Using wordlist: {:?}", wordlist_paths);
-    debug!("Using mode: {:?}", mode);
-    debug!("Using concurrent requests: {:?}", n_threads);
-    debug!("Using certificate validation: {:?}", !ignore_certificate);
-    debug!("Using HTTP headers: {:?}", http_headers);
+    debug!("Using url: {:?}", common_args.url);
+    debug!("Using wordlist: {:?}", common_args.wordlist_paths);
+    debug!("Using concurrent requests: {:?}", common_args.n_threads);
+    debug!("Using certificate validation: {:?}", !common_args.ignore_certificate);
+    debug!("Using HTTP headers: {:?}", common_args.http_headers);
     debug!(
         "Using exit on connection errors: {:?}",
-        exit_on_connection_errors
+        common_args.exit_on_connection_errors
     );
     debug!(
         "Including status codes: {}",
-        if include_status_codes.is_empty() {
+        if common_args.include_status_codes.is_empty() {
             String::from("ALL")
         } else {
-            format!("{:?}", include_status_codes)
+            format!("{:?}", common_args.include_status_codes)
         }
     );
-    debug!("Excluding status codes: {:?}", ignore_status_codes);
+    debug!("Excluding status codes: {:?}", common_args.ignore_status_codes);
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
@@ -274,23 +196,7 @@ fn main() {
 
     println!("{}", banner::copyright());
 
-    if let Some((Width(w), Height(h))) = terminal_size() {
-        if w < 122 {
-            no_banner = true;
-        }
-
-        if w < 104 {
-            warn!("Your terminal is {} cols wide and {} lines tall", w, h);
-            warn!("Disabling progress bar, minimum cols: 104");
-            no_progress_bar = true;
-        }
-    } else {
-        warn!("Unable to get terminal size");
-        no_banner = true;
-        no_progress_bar = true;
-    }
-
-    if !no_banner {
+    if !common_args.no_banner {
         println!("{}", banner::generate());
     }
 
@@ -298,9 +204,9 @@ fn main() {
         "{}",
         banner::configuration(
             mode,
-            url,
+            &common_args.url,
             submatches.value_of("threads").unwrap(),
-            &wordlist_paths[0]
+            &common_args.wordlist_paths[0]
         )
     );
     println!("{}", banner::starting_time());
@@ -310,28 +216,29 @@ fn main() {
 
     match mode {
         "dir" => {
+            let append_slash = submatches.is_present("append-slash");
             let extensions = submatches.values_of("extensions")
                 .unwrap()
                 .filter(|e| !e.is_empty())
                 .collect::<Vec<&str>>();
             debug!("Using extensions: {:?}", extensions);
-            let urls = build_urls(&wordlist_paths[0], url, extensions, append_slash);
+            let urls = build_urls(&common_args.wordlist_paths[0], &common_args.url, extensions, append_slash);
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleDirScanResult>();
             let config = DirConfig {
-                n_threads,
-                ignore_certificate,
-                http_method: http_method.to_owned(),
-                http_body: http_body.to_owned(),
-                user_agent: user_agent.to_owned(),
-                http_headers,
+                n_threads: common_args.n_threads,
+                ignore_certificate: common_args.ignore_certificate,
+                http_method: common_args.http_method.to_owned(),
+                http_body: common_args.http_body.to_owned(),
+                user_agent: common_args.user_agent.to_owned(),
+                http_headers: common_args.http_headers.clone(),
             };
             let rp_config = ResultProcessorConfig {
-                include: include_status_codes,
-                ignore: ignore_status_codes,
+                include: common_args.include_status_codes,
+                ignore: common_args.ignore_status_codes,
             };
             let mut result_processor = ScanResult::new(rp_config);
-            let bar = if no_progress_bar {
+            let bar = if common_args.no_progress_bar {
                 ProgressBar::hidden()
             } else {
                 ProgressBar::new(total_numbers_of_request as u64)
@@ -367,7 +274,7 @@ fn main() {
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if current_numbers_of_request == 1 || exit_on_connection_errors {
+                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -391,7 +298,7 @@ fn main() {
                         _ => 0,
                     };
 
-                    if no_progress_bar {
+                    if common_args.no_progress_bar {
                         println!(
                             "{}\t{}{}{}{}",
                             msg.method,
@@ -416,18 +323,18 @@ fn main() {
             bar.finish();
             println!("{}", banner::ending_time());
 
-            if !output.is_empty() {
-                save_dir_results(output, &result_processor.results);
+            if !common_args.output.is_empty() {
+                save_dir_results(&common_args.output, &result_processor.results);
             }
         }
         "dns" => {
-            let domains = build_domains(&wordlist_paths[0], url);
+            let domains = build_domains(&common_args.wordlist_paths[0], &common_args.url);
             let total_numbers_of_request = domains.len();
             let (tx, rx) = channel::<SingleDnsScanResult>();
-            let config = DnsConfig { n_threads };
+            let config = DnsConfig { n_threads: common_args.n_threads };
             let mut result_processor = DnsScanResult::new();
 
-            let bar = if no_progress_bar {
+            let bar = if common_args.no_progress_bar {
                 ProgressBar::hidden()
             } else {
                 ProgressBar::new(total_numbers_of_request as u64)
@@ -464,7 +371,7 @@ fn main() {
                 result_processor.maybe_add_result(msg.clone());
                 match msg.status {
                     true => {
-                        if no_progress_bar {
+                        if common_args.no_progress_bar {
                             println!("OK\t{}", &msg.domain[..msg.domain.len() - 3]);
                         } else {
                             bar.println(format!("OK\t{}", &msg.domain[..msg.domain.len() - 3]));
@@ -476,14 +383,14 @@ fn main() {
                                     let string_repr = addr.ip().to_string();
                                     match addr.is_ipv4() {
                                         true => {
-                                            if no_progress_bar {
+                                            if common_args.no_progress_bar {
                                                 println!("\t\tIPv4: {}", string_repr);
                                             } else {
                                                 bar.println(format!("\t\tIPv4: {}", string_repr));
                                             }
                                         }
                                         false => {
-                                            if no_progress_bar {
+                                            if common_args.no_progress_bar {
                                                 println!("\t\tIPv6: {}", string_repr);
                                             } else {
                                                 bar.println(format!("\t\tIPv6: {}", string_repr));
@@ -502,34 +409,34 @@ fn main() {
             bar.finish();
             println!("{}", banner::ending_time());
 
-            if !output.is_empty() {
-                save_dns_results(output, &result_processor.results);
+            if !common_args.output.is_empty() {
+                save_dns_results(&common_args.output, &result_processor.results);
             }
         }
         "vhost" => {
-            if domain.is_empty() {
+            if common_args.domain.is_empty() {
                 error!("domain not specified (-d)");
                 return;
             }
 
-            if ignore_strings.is_empty() {
+            if common_args.ignore_strings.is_empty() {
                 error!("ignore_strings not specified (-x)");
                 return;
             }
 
-            let vhosts = build_vhosts(&wordlist_paths[0], domain);
+            let vhosts = build_vhosts(&common_args.wordlist_paths[0], &common_args.domain);
             let total_numbers_of_request = vhosts.len();
             let (tx, rx) = channel::<SingleVhostScanResult>();
             let config = VhostConfig {
-                n_threads,
-                ignore_certificate,
-                http_method: http_method.to_owned(),
-                user_agent: user_agent.to_owned(),
-                ignore_strings,
-                original_url: url.to_owned(),
+                n_threads: common_args.n_threads,
+                ignore_certificate: common_args.ignore_certificate,
+                http_method: common_args.http_method.to_owned(),
+                user_agent: common_args.user_agent.to_owned(),
+                ignore_strings: common_args.ignore_strings,
+                original_url: common_args.url.to_owned(),
             };
             let mut result_processor = VhostScanResult::new();
-            let bar = if no_progress_bar {
+            let bar = if common_args.no_progress_bar {
                 ProgressBar::hidden()
             } else {
                 ProgressBar::new(total_numbers_of_request as u64)
@@ -565,7 +472,7 @@ fn main() {
                 match &msg.error {
                     Some(e) => {
                         error!("{:?}", e);
-                        if current_numbers_of_request == 1 || exit_on_connection_errors {
+                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors {
                             warn!("Check connectivity to the target");
                             break;
                         }
@@ -583,7 +490,7 @@ fn main() {
 
                 if !msg.ignored {
                     result_processor.maybe_add_result(msg.clone());
-                    if no_progress_bar {
+                    if common_args.no_progress_bar {
                         println!(
                             "{}\t{}{}{}",
                             msg.method,
@@ -606,8 +513,8 @@ fn main() {
             bar.finish();
             println!("{}", banner::ending_time());
 
-            if !output.is_empty() {
-                save_vhost_results(output, &result_processor.results);
+            if !common_args.output.is_empty() {
+                save_vhost_results(&common_args.output, &result_processor.results);
             }
         }
         "fuzz" => {
@@ -631,21 +538,21 @@ fn main() {
                 None
             };
             let fuzzbuster = FuzzBuster {
-                n_threads,
-                ignore_certificate,
-                http_method: http_method.to_owned(),
-                http_body: http_body.to_owned(),
-                user_agent: user_agent.to_owned(),
-                http_headers,
-                wordlist_paths,
-                url: url.to_owned(),
-                ignore_status_codes,
-                include_status_codes,
-                no_progress_bar,
-                exit_on_connection_errors,
-                output: output.to_owned(),
-                include_body: include_strings,
-                ignore_body: ignore_strings,
+                n_threads: common_args.n_threads,
+                ignore_certificate: common_args.ignore_certificate,
+                http_method: common_args.http_method.to_owned(),
+                http_body: common_args.http_body.to_owned(),
+                user_agent: common_args.user_agent.to_owned(),
+                http_headers: common_args.http_headers,
+                wordlist_paths: common_args.wordlist_paths,
+                url: common_args.url.to_owned(),
+                ignore_status_codes: common_args.ignore_status_codes,
+                include_status_codes: common_args.include_status_codes,
+                no_progress_bar: common_args.no_progress_bar,
+                exit_on_connection_errors: common_args.exit_on_connection_errors,
+                output: common_args.output.to_owned(),
+                include_body: common_args.include_strings,
+                ignore_body: common_args.ignore_strings,
                 csrf_url,
                 csrf_regex,
                 csrf_headers,
@@ -791,4 +698,140 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .default_value("rustbuster")
             .takes_value(true),
     )
+}
+
+struct CommonArgs {
+    domain: String,
+    user_agent: String,
+    http_method: String,
+    http_body: String,
+    url: String,
+    wordlist_paths: Vec<String>,
+    ignore_certificate: bool,
+    no_banner: bool,
+    no_progress_bar: bool,
+    exit_on_connection_errors: bool,
+    n_threads: usize,
+    http_headers: Vec<(String, String)>,
+    include_strings: Vec<String>,
+    ignore_strings: Vec<String>,
+    include_status_codes: Vec<String>,
+    ignore_status_codes: Vec<String>,
+    output: String,
+}
+
+fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
+    let domain = submatches.value_of("domain").unwrap_or("");
+    let user_agent = submatches.value_of("user-agent").unwrap();
+    let http_method = submatches.value_of("http-method").unwrap();
+    let http_body = submatches.value_of("http-body").unwrap();
+    let url = submatches.value_of("url").unwrap();
+    let wordlist_paths = submatches
+        .values_of("wordlist")
+        .unwrap()
+        .map(|w| w.to_owned())
+        .collect::<Vec<String>>();
+    let ignore_certificate = submatches.is_present("ignore-certificate");
+    let mut no_banner = submatches.is_present("no-banner");
+    let mut no_progress_bar = submatches.is_present("no-progress-bar");
+    let exit_on_connection_errors = submatches.is_present("exit-on-error");
+    let http_headers: Vec<(String, String)> = if submatches.is_present("http-header") {
+        submatches
+            .values_of("http-header")
+            .unwrap()
+            .map(|h| fuzzbuster::utils::split_http_headers(h))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let ignore_strings: Vec<String> = if submatches.is_present("ignore-string") {
+        submatches
+            .values_of("ignore-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let include_strings: Vec<String> = if submatches.is_present("include-string") {
+        submatches
+            .values_of("include-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let n_threads = submatches
+        .value_of("threads")
+        .unwrap()
+        .parse::<usize>()
+        .expect("threads is a number");
+    let include_status_codes = submatches
+        .values_of("include-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() {
+                return false;
+            }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                warn!("Ignoring invalid status code for '-s' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+    let ignore_status_codes = submatches
+        .values_of("ignore-status-codes")
+        .unwrap()
+        .filter(|s| {
+            if s.is_empty() {
+                return false;
+            }
+            let valid = hyper::StatusCode::from_str(s).is_ok();
+            if !valid {
+                warn!("Ignoring invalid status code for '-S' param: {}", s);
+            }
+            valid
+        })
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+    let output = submatches.value_of("output").unwrap();
+
+    if let Some((Width(w), Height(h))) = terminal_size() {
+        if w < 122 {
+            no_banner = true;
+        }
+
+        if w < 104 {
+            warn!("Your terminal is {} cols wide and {} lines tall", w, h);
+            warn!("Disabling progress bar, minimum cols: 104");
+            no_progress_bar = true;
+        }
+    } else {
+        warn!("Unable to get terminal size");
+        no_banner = true;
+        no_progress_bar = true;
+    }
+
+    CommonArgs {
+        domain: domain.to_owned(),
+        user_agent: user_agent.to_owned(),
+        http_method: http_method.to_owned(),
+        http_body: http_body.to_owned(),
+        url: url.to_owned(),
+        wordlist_paths,
+        ignore_certificate,
+        no_banner,
+        no_progress_bar,
+        exit_on_connection_errors,
+        n_threads,
+        http_headers,
+        include_strings,
+        ignore_strings,
+        include_status_codes,
+        ignore_status_codes,
+        output: output.to_owned()
+    }
 }
