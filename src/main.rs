@@ -3,7 +3,7 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use terminal_size::{terminal_size, Height, Width};
 
@@ -65,207 +65,78 @@ fn main() {
             --csrf-url \"http://localhost:3000/csrf\" \\
             --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'
 ")
-        .arg(
-            Arg::with_name("verbose")
-                .long("verbose")
-                .short("v")
-                .multiple(true)
-                .help("Sets the level of verbosity"),
-        )
-        .arg(
-            Arg::with_name("no-banner")
-                .long("no-banner")
-                .help("Skips initial banner"),
-        )
-        .arg(
-            Arg::with_name("url")
-                .long("url")
-                .alias("domain")
-                .help("Sets the target URL")
-                .short("u")
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("wordlist")
-                .long("wordlist")
-                .help("Sets the wordlist")
-                .short("w")
-                .takes_value(true)
-                .multiple(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("extensions")
-                .long("extensions")
-                .help("Sets the extensions")
-                .short("e")
-                .default_value("")
-                .use_delimiter(true),
-        )
-        .arg(
-            Arg::with_name("mode")
-                .long("mode")
-                .help("Sets the mode of operation (dir, dns, fuzz)")
-                .short("m")
-                .takes_value(true)
-                .default_value("dir"),
-        )
-        .arg(
-            Arg::with_name("threads")
-                .long("threads")
-                .alias("workers")
-                .help("Sets the amount of concurrent requests")
-                .short("t")
-                .default_value("10")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("ignore-certificate")
-                .long("ignore-certificate")
-                .alias("no-check-certificate")
-                .help("Disables TLS certificate validation")
-                .short("k"),
-        )
-        .arg(
-            Arg::with_name("exit-on-error")
-                .long("exit-on-error")
-                .help("Exits on connection errors")
-                .short("K"),
-        )
-        .arg(
-            Arg::with_name("include-status-codes")
-                .long("include-status-codes")
-                .help("Sets the list of status codes to include")
-                .short("s")
-                .default_value("")
-                .use_delimiter(true),
-        )
-        .arg(
-            Arg::with_name("ignore-status-codes")
-                .long("ignore-status-codes")
-                .help("Sets the list of status codes to ignore")
-                .short("S")
-                .default_value("404")
-                .use_delimiter(true),
-        )
-        .arg(
-            Arg::with_name("output")
-                .long("output")
-                .help("Saves the results in the specified file")
-                .short("o")
-                .default_value("")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("no-progress-bar")
-                .long("no-progress-bar")
-                .help("Disables the progress bar"),
-        )
-        .arg(
-            Arg::with_name("http-method")
-                .long("http-method")
-                .help("Uses the specified HTTP method")
-                .short("X")
-                .default_value("GET")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("http-body")
-                .long("http-body")
-                .help("Uses the specified HTTP method")
-                .short("b")
-                .default_value("")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("http-header")
-                .long("http-header")
-                .help("Appends the specified HTTP header")
-                .short("H")
-                .multiple(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("user-agent")
-                .long("user-agent")
-                .help("Uses the specified User-Agent")
-                .short("a")
-                .default_value("rustbuster")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("domain")
-                .long("domain")
-                .help("Uses the specified domain")
-                .short("d")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("append-slash")
-                .long("append-slash")
-                .help("Tries to also append / to the base request")
-                .short("f"),
-        )
-        .arg(
-            Arg::with_name("ignore-string")
-                .long("ignore-string")
-                .help("Ignores results with specified string in the HTTP Body")
-                .short("x")
-                .multiple(true)
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("include-string")
-                .long("include-string")
-                .help("Includes results with specified string in the HTTP body")
-                .short("i")
-                .multiple(true)
-                .conflicts_with("ignore-string")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("csrf-url")
-                .long("csrf-url")
-                .help("Grabs the CSRF token via GET to csrf-url")
-                .requires("csrf-regex")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("csrf-regex")
-                .long("csrf-regex")
-                .help("Grabs the CSRF token applying the specified RegEx")
-                .requires("csrf-url")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("csrf-header")
-                .long("csrf-header")
-                .help("Adds the specified headers to CSRF GET request")
-                .requires("csrf-url")
-                .multiple(true)
-                .takes_value(true),
-        )
+        .subcommand(set_common_args(SubCommand::with_name("dir"))
+            .about("Directories and files enumeration mode")
+            .arg(
+                Arg::with_name("extensions")
+                    .long("extensions")
+                    .help("Sets the extensions")
+                    .short("e")
+                    .default_value("")
+                    .use_delimiter(true),
+                )
+                .arg(
+                    Arg::with_name("append-slash")
+                        .long("append-slash")
+                        .help("Tries to also append / to the base request")
+                        .short("f"),
+                ))
+        .subcommand(set_common_args(SubCommand::with_name("dns"))
+            .about("A/AAAA entries enumeration mode"))
+        .subcommand(set_common_args(SubCommand::with_name("vhost"))
+            .about("Virtual hosts enumeration mode")
+            .arg(
+                Arg::with_name("domain")
+                    .long("domain")
+                    .help("Uses the specified domain to bruteforce")
+                    .short("d")
+                    .takes_value(true),
+            ))
+        .subcommand(set_common_args(SubCommand::with_name("fuzz"))
+            .about("Custom fuzzing enumeration mode")
+                    .arg(
+                Arg::with_name("csrf-url")
+                    .long("csrf-url")
+                    .help("Grabs the CSRF token via GET to csrf-url")
+                    .requires("csrf-regex")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("csrf-regex")
+                    .long("csrf-regex")
+                    .help("Grabs the CSRF token applying the specified RegEx")
+                    .requires("csrf-url")
+                    .takes_value(true),
+            )
+            .arg(
+                Arg::with_name("csrf-header")
+                    .long("csrf-header")
+                    .help("Adds the specified headers to CSRF GET request")
+                    .requires("csrf-url")
+                    .multiple(true)
+                    .takes_value(true),
+            ))
         .get_matches();
 
-    let domain = matches.value_of("domain").unwrap_or("");
-    let append_slash = matches.is_present("append-slash");
-    let user_agent = matches.value_of("user-agent").unwrap();
-    let http_method = matches.value_of("http-method").unwrap();
-    let http_body = matches.value_of("http-body").unwrap();
-    let url = matches.value_of("url").unwrap();
-    let wordlist_paths = matches
+    let mode = matches.subcommand_name().unwrap_or("dir");
+    let submatches = matches.subcommand_matches(mode).unwrap();
+    let domain = submatches.value_of("domain").unwrap_or("");
+    let append_slash = submatches.is_present("append-slash");
+    let user_agent = submatches.value_of("user-agent").unwrap();
+    let http_method = submatches.value_of("http-method").unwrap();
+    let http_body = submatches.value_of("http-body").unwrap();
+    let url = submatches.value_of("url").unwrap();
+    let wordlist_paths = submatches
         .values_of("wordlist")
         .unwrap()
         .map(|w| w.to_owned())
         .collect::<Vec<String>>();
-    let mode = matches.value_of("mode").unwrap();
-    let ignore_certificate = matches.is_present("ignore-certificate");
-    let mut no_banner = matches.is_present("no-banner");
-    let mut no_progress_bar = matches.is_present("no-progress-bar");
-    let exit_on_connection_errors = matches.is_present("exit-on-error");
-    let http_headers: Vec<(String, String)> = if matches.is_present("http-header") {
-        matches
+    let ignore_certificate = submatches.is_present("ignore-certificate");
+    let mut no_banner = submatches.is_present("no-banner");
+    let mut no_progress_bar = submatches.is_present("no-progress-bar");
+    let exit_on_connection_errors = submatches.is_present("exit-on-error");
+    let http_headers: Vec<(String, String)> = if submatches.is_present("http-header") {
+        submatches
             .values_of("http-header")
             .unwrap()
             .map(|h| fuzzbuster::utils::split_http_headers(h))
@@ -273,8 +144,8 @@ fn main() {
     } else {
         Vec::new()
     };
-    let ignore_strings: Vec<String> = if matches.is_present("ignore-string") {
-        matches
+    let ignore_strings: Vec<String> = if submatches.is_present("ignore-string") {
+        submatches
             .values_of("ignore-string")
             .unwrap()
             .map(|h| h.to_owned())
@@ -282,8 +153,8 @@ fn main() {
     } else {
         Vec::new()
     };
-    let include_strings: Vec<String> = if matches.is_present("include-string") {
-        matches
+    let include_strings: Vec<String> = if submatches.is_present("include-string") {
+        submatches
             .values_of("include-string")
             .unwrap()
             .map(|h| h.to_owned())
@@ -291,17 +162,12 @@ fn main() {
     } else {
         Vec::new()
     };
-    let n_threads = matches
+    let n_threads = submatches
         .value_of("threads")
         .unwrap()
         .parse::<usize>()
         .expect("threads is a number");
-    let extensions = matches
-        .values_of("extensions")
-        .unwrap()
-        .filter(|e| !e.is_empty())
-        .collect::<Vec<&str>>();
-    let include_status_codes = matches
+    let include_status_codes = submatches
         .values_of("include-status-codes")
         .unwrap()
         .filter(|s| {
@@ -316,7 +182,7 @@ fn main() {
         })
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
-    let ignore_status_codes = matches
+    let ignore_status_codes = submatches
         .values_of("ignore-status-codes")
         .unwrap()
         .filter(|s| {
@@ -331,49 +197,33 @@ fn main() {
         })
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
-    let output = matches.value_of("output").unwrap();
-    let csrf_url = match matches.value_of("csrf-url") {
-        Some(v) => Some(v.to_owned()),
-        None => None,
-    };
-    let csrf_regex = match matches.value_of("csrf-regex") {
-        Some(v) => Some(v.to_owned()),
-        None => None,
-    };
-    let csrf_headers: Option<Vec<(String, String)>> = if matches.is_present("csrf-header") {
-        Some(
-            matches
-                .values_of("csrf-header")
-                .unwrap()
-                .map(|h| fuzzbuster::utils::split_http_headers(h))
-                .collect(),
-        )
-    } else {
-        None
-    };
+    let output = submatches.value_of("output").unwrap();
 
-    match url.parse::<hyper::Uri>() {
-        Err(e) => {
-            error!(
-                "Invalid URL: {}, consider adding a protocol like http:// or https://",
-                e
-            );
-            return;
+    if mode != "dns" {
+        debug!("mode {}", mode);
+        match url.parse::<hyper::Uri>() {
+            Err(e) => {
+                error!(
+                    "Invalid URL: {}, consider adding a protocol like http:// or https://",
+                    e
+                );
+                return;
+            }
+            Ok(v) => match v.scheme_part() {
+                Some(s) => {
+                    if s != "http" && s != "https" {
+                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
+                        return;
+                    }
+                }
+                None => {
+                    if mode != "dns" {
+                        error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                        return;
+                    }
+                }
+            },
         }
-        Ok(v) => match v.scheme_part() {
-            Some(s) => {
-                if s != "http" && s != "https" {
-                    error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
-                    return;
-                }
-            }
-            None => {
-                if mode != "dns" {
-                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
-                    return;
-                }
-            }
-        },
     }
 
     let all_wordlists_exist = wordlist_paths
@@ -396,7 +246,6 @@ fn main() {
     debug!("Using url: {:?}", url);
     debug!("Using wordlist: {:?}", wordlist_paths);
     debug!("Using mode: {:?}", mode);
-    debug!("Using extensions: {:?}", extensions);
     debug!("Using concurrent requests: {:?}", n_threads);
     debug!("Using certificate validation: {:?}", !ignore_certificate);
     debug!("Using HTTP headers: {:?}", http_headers);
@@ -416,7 +265,7 @@ fn main() {
 
     // Vary the output based on how many times the user used the "verbose" flag
     // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-    match matches.occurrences_of("verbose") {
+    match submatches.occurrences_of("verbose") {
         0 => trace!("No verbose info"),
         1 => trace!("Some verbose info"),
         2 => trace!("Tons of verbose info"),
@@ -450,7 +299,7 @@ fn main() {
         banner::configuration(
             mode,
             url,
-            matches.value_of("threads").unwrap(),
+            submatches.value_of("threads").unwrap(),
             &wordlist_paths[0]
         )
     );
@@ -461,6 +310,11 @@ fn main() {
 
     match mode {
         "dir" => {
+            let extensions = submatches.values_of("extensions")
+                .unwrap()
+                .filter(|e| !e.is_empty())
+                .collect::<Vec<&str>>();
+            debug!("Using extensions: {:?}", extensions);
             let urls = build_urls(&wordlist_paths[0], url, extensions, append_slash);
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleDirScanResult>();
@@ -757,6 +611,25 @@ fn main() {
             }
         }
         "fuzz" => {
+            let csrf_url = match submatches.value_of("csrf-url") {
+                Some(v) => Some(v.to_owned()),
+                None => None,
+            };
+            let csrf_regex = match submatches.value_of("csrf-regex") {
+                Some(v) => Some(v.to_owned()),
+                None => None,
+            };
+            let csrf_headers: Option<Vec<(String, String)>> = if submatches.is_present("csrf-header") {
+                Some(
+                    submatches
+                        .values_of("csrf-header")
+                        .unwrap()
+                        .map(|h| fuzzbuster::utils::split_http_headers(h))
+                        .collect(),
+                )
+            } else {
+                None
+            };
             let fuzzbuster = FuzzBuster {
                 n_threads,
                 ignore_certificate,
@@ -784,4 +657,138 @@ fn main() {
         }
         _ => (),
     }
+}
+
+fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("verbose")
+            .long("verbose")
+            .short("v")
+            .multiple(true)
+            .help("Sets the level of verbosity"),
+    )
+    .arg(
+        Arg::with_name("no-banner")
+            .long("no-banner")
+            .help("Skips initial banner"),
+    )
+    .arg(
+        Arg::with_name("url")
+            .long("url")
+            .alias("domain")
+            .help("Sets the target URL")
+            .short("u")
+            .takes_value(true)
+            .required(true),
+    )
+    .arg(
+        Arg::with_name("wordlist")
+            .long("wordlist")
+            .help("Sets the wordlist")
+            .short("w")
+            .takes_value(true)
+            .multiple(true)
+            .use_delimiter(true)
+            .required(true),
+    )
+    .arg(
+        Arg::with_name("ignore-string")
+            .long("ignore-string")
+            .help("Ignores results with specified string in the HTTP Body")
+            .short("x")
+            .multiple(true)
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("include-string")
+            .long("include-string")
+            .help("Includes results with specified string in the HTTP body")
+            .short("i")
+            .multiple(true)
+            .conflicts_with("ignore-string")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("include-status-codes")
+            .long("include-status-codes")
+            .help("Sets the list of status codes to include")
+            .short("s")
+            .default_value("")
+            .use_delimiter(true),
+    )
+    .arg(
+        Arg::with_name("ignore-status-codes")
+            .long("ignore-status-codes")
+            .help("Sets the list of status codes to ignore")
+            .short("S")
+            .default_value("404")
+            .use_delimiter(true),
+    )
+    .arg(
+        Arg::with_name("threads")
+            .long("threads")
+            .alias("workers")
+            .help("Sets the amount of concurrent requests")
+            .short("t")
+            .default_value("10")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("ignore-certificate")
+            .long("ignore-certificate")
+            .alias("no-check-certificate")
+            .help("Disables TLS certificate validation")
+            .short("k"),
+    )
+    .arg(
+        Arg::with_name("exit-on-error")
+            .long("exit-on-error")
+            .help("Exits on connection errors")
+            .short("K"),
+    )
+    .arg(
+        Arg::with_name("output")
+            .long("output")
+            .help("Saves the results in the specified file")
+            .short("o")
+            .default_value("")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("no-progress-bar")
+            .long("no-progress-bar")
+            .help("Disables the progress bar"),
+    )
+    .arg(
+        Arg::with_name("http-method")
+            .long("http-method")
+            .help("Uses the specified HTTP method")
+            .short("X")
+            .default_value("GET")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("http-body")
+            .long("http-body")
+            .help("Uses the specified HTTP method")
+            .short("b")
+            .default_value("")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("http-header")
+            .long("http-header")
+            .help("Appends the specified HTTP header")
+            .short("H")
+            .multiple(true)
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("user-agent")
+            .long("user-agent")
+            .help("Uses the specified User-Agent")
+            .short("a")
+            .default_value("rustbuster")
+            .takes_value(true),
+    )
 }
