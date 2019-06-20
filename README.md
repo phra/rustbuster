@@ -147,7 +147,7 @@ EXAMPLE:
     rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x "Hello"
 ```
 
-#### `fuzz` usage
+### `fuzz` usage
 
 ```shell
 rustbuster-fuzz
