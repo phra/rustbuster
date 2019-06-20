@@ -74,15 +74,19 @@ fn main() {
                     .short("e")
                     .default_value("")
                     .use_delimiter(true),
-                )
-                .arg(
-                    Arg::with_name("append-slash")
-                        .long("append-slash")
-                        .help("Tries to also append / to the base request")
-                        .short("f"),
-                ))
+            )
+            .arg(
+                Arg::with_name("append-slash")
+                    .long("append-slash")
+                    .help("Tries to also append / to the base request")
+                    .short("f"),
+            )
+            .after_help("EXAMPLE:
+    rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php"))
         .subcommand(set_common_args(SubCommand::with_name("dns"))
-            .about("A/AAAA entries enumeration mode"))
+            .about("A/AAAA entries enumeration mode")
+            .after_help("EXAMPLE:
+    rustbuster dns -u google.com -w examples/wordlist"))
         .subcommand(set_common_args(SubCommand::with_name("vhost"))
             .about("Virtual hosts enumeration mode")
             .arg(
@@ -92,7 +96,9 @@ fn main() {
                     .short("d")
                     .required(true)
                     .takes_value(true),
-            ))
+            )
+            .after_help("EXAMPLE:
+    rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\""))
         .subcommand(set_common_args(SubCommand::with_name("fuzz"))
             .about("Custom fuzzing enumeration mode")
                     .arg(
@@ -116,7 +122,17 @@ fn main() {
                     .requires("csrf-url")
                     .multiple(true)
                     .takes_value(true),
-            ))
+            )
+            .after_help("EXAMPLE:
+    rustbuster fuzz -u http://localhost:3000/login \\
+        -X POST \\
+        -H \"Content-Type: application/json\" \\
+        -b '{\"user\":\"FUZZ\",\"password\":\"FUZZ\",\"csrf\":\"CSRFCSRF\"}' \\
+        -w examples/wordlist \\
+        -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-10000.txt \\
+        -s 200 \\
+        --csrf-url \"http://localhost:3000/csrf\" \\
+        --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'"))
         .get_matches();
 
     let mode = matches.subcommand_name().unwrap_or("dir");
@@ -627,39 +643,6 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .required(true),
     )
     .arg(
-        Arg::with_name("ignore-string")
-            .long("ignore-string")
-            .help("Ignores results with specified string in the HTTP Body")
-            .short("x")
-            .multiple(true)
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name("include-string")
-            .long("include-string")
-            .help("Includes results with specified string in the HTTP body")
-            .short("i")
-            .multiple(true)
-            .conflicts_with("ignore-string")
-            .takes_value(true),
-    )
-    .arg(
-        Arg::with_name("include-status-codes")
-            .long("include-status-codes")
-            .help("Sets the list of status codes to include")
-            .short("s")
-            .default_value("")
-            .use_delimiter(true),
-    )
-    .arg(
-        Arg::with_name("ignore-status-codes")
-            .long("ignore-status-codes")
-            .help("Sets the list of status codes to ignore")
-            .short("S")
-            .default_value("404")
-            .use_delimiter(true),
-    )
-    .arg(
         Arg::with_name("threads")
             .long("threads")
             .alias("workers")
@@ -667,13 +650,6 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("t")
             .default_value("10")
             .takes_value(true),
-    )
-    .arg(
-        Arg::with_name("ignore-certificate")
-            .long("ignore-certificate")
-            .alias("no-check-certificate")
-            .help("Disables TLS certificate validation")
-            .short("k"),
     )
     .arg(
         Arg::with_name("exit-on-error")
@@ -693,6 +669,40 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name("no-progress-bar")
             .long("no-progress-bar")
             .help("Disables the progress bar"),
+    )
+}
+
+fn set_http_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("include-status-codes")
+            .long("include-status-codes")
+            .help("Sets the list of status codes to include")
+            .short("s")
+            .default_value("")
+            .use_delimiter(true),
+    )
+    .arg(
+        Arg::with_name("ignore-status-codes")
+            .long("ignore-status-codes")
+            .help("Sets the list of status codes to ignore")
+            .short("S")
+            .default_value("404")
+            .use_delimiter(true),
+    )
+    .arg(
+        Arg::with_name("user-agent")
+            .long("user-agent")
+            .help("Uses the specified User-Agent")
+            .short("a")
+            .default_value("rustbuster")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("ignore-certificate")
+            .long("ignore-certificate")
+            .alias("no-check-certificate")
+            .help("Disables TLS certificate validation")
+            .short("k"),
     )
     .arg(
         Arg::with_name("http-method")
@@ -719,50 +729,102 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true),
     )
     .arg(
-        Arg::with_name("user-agent")
-            .long("user-agent")
-            .help("Uses the specified User-Agent")
-            .short("a")
-            .default_value("rustbuster")
+        Arg::with_name("ignore-string")
+            .long("ignore-string")
+            .help("Ignores results with specified string in the HTTP Body")
+            .short("x")
+            .multiple(true)
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("include-string")
+            .long("include-string")
+            .help("Includes results with specified string in the HTTP body")
+            .short("i")
+            .multiple(true)
+            .conflicts_with("ignore-string")
             .takes_value(true),
     )
 }
 
 struct CommonArgs {
-    domain: String,
-    user_agent: String,
-    http_method: String,
-    http_body: String,
-    url: String,
     wordlist_paths: Vec<String>,
-    ignore_certificate: bool,
     no_banner: bool,
     no_progress_bar: bool,
     exit_on_connection_errors: bool,
     n_threads: usize,
-    http_headers: Vec<(String, String)>,
-    include_strings: Vec<String>,
-    ignore_strings: Vec<String>,
-    include_status_codes: Vec<String>,
-    ignore_status_codes: Vec<String>,
     output: String,
 }
 
+struct DNSArgs {
+    domain: String,
+}
+
+struct HTTPArgs {
+    user_agent: String,
+    http_method: String,
+    http_body: String,
+    url: String,
+    ignore_certificate: bool,
+    http_headers: Vec<(String, String)>,
+    include_status_codes: Vec<String>,
+    ignore_status_codes: Vec<String>,
+}
+
+struct BodyArgs {
+    include_strings: Vec<String>,
+    ignore_strings: Vec<String>,
+}
+
 fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
-    let domain = submatches.value_of("domain").unwrap_or("");
-    let user_agent = submatches.value_of("user-agent").unwrap();
-    let http_method = submatches.value_of("http-method").unwrap();
-    let http_body = submatches.value_of("http-body").unwrap();
-    let url = submatches.value_of("url").unwrap();
     let wordlist_paths = submatches
         .values_of("wordlist")
         .unwrap()
         .map(|w| w.to_owned())
         .collect::<Vec<String>>();
-    let ignore_certificate = submatches.is_present("ignore-certificate");
     let mut no_banner = submatches.is_present("no-banner");
     let mut no_progress_bar = submatches.is_present("no-progress-bar");
     let exit_on_connection_errors = submatches.is_present("exit-on-error");
+    let n_threads = submatches
+        .value_of("threads")
+        .unwrap()
+        .parse::<usize>()
+        .expect("threads is a number");
+
+    let output = submatches.value_of("output").unwrap();
+
+    if let Some((Width(w), Height(h))) = terminal_size() {
+        if w < 122 {
+            no_banner = true;
+        }
+
+        if w < 104 {
+            warn!("Your terminal is {} cols wide and {} lines tall", w, h);
+            warn!("Disabling progress bar, minimum cols: 104");
+            no_progress_bar = true;
+        }
+    } else {
+        warn!("Unable to get terminal size");
+        no_banner = true;
+        no_progress_bar = true;
+    }
+
+    CommonArgs {
+        wordlist_paths,
+        no_banner,
+        no_progress_bar,
+        exit_on_connection_errors,
+        n_threads,
+        output: output.to_owned(),
+    }
+}
+
+fn extract_http_args<'a>(submatches: &clap::ArgMatches<'a>) -> HTTPArgs {
+    let user_agent = submatches.value_of("user-agent").unwrap();
+    let http_method = submatches.value_of("http-method").unwrap();
+    let http_body = submatches.value_of("http-body").unwrap();
+    let url = submatches.value_of("url").unwrap();
+    let ignore_certificate = submatches.is_present("ignore-certificate");
     let http_headers: Vec<(String, String)> = if submatches.is_present("http-header") {
         submatches
             .values_of("http-header")
@@ -772,29 +834,6 @@ fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
     } else {
         Vec::new()
     };
-    let ignore_strings: Vec<String> = if submatches.is_present("ignore-string") {
-        submatches
-            .values_of("ignore-string")
-            .unwrap()
-            .map(|h| h.to_owned())
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let include_strings: Vec<String> = if submatches.is_present("include-string") {
-        submatches
-            .values_of("include-string")
-            .unwrap()
-            .map(|h| h.to_owned())
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let n_threads = submatches
-        .value_of("threads")
-        .unwrap()
-        .parse::<usize>()
-        .expect("threads is a number");
     let include_status_codes = submatches
         .values_of("include-status-codes")
         .unwrap()
@@ -825,41 +864,49 @@ fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
         })
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
-    let output = submatches.value_of("output").unwrap();
 
-    if let Some((Width(w), Height(h))) = terminal_size() {
-        if w < 122 {
-            no_banner = true;
-        }
-
-        if w < 104 {
-            warn!("Your terminal is {} cols wide and {} lines tall", w, h);
-            warn!("Disabling progress bar, minimum cols: 104");
-            no_progress_bar = true;
-        }
-    } else {
-        warn!("Unable to get terminal size");
-        no_banner = true;
-        no_progress_bar = true;
-    }
-
-    CommonArgs {
-        domain: domain.to_owned(),
+    HTTPArgs {
         user_agent: user_agent.to_owned(),
         http_method: http_method.to_owned(),
         http_body: http_body.to_owned(),
         url: url.to_owned(),
-        wordlist_paths,
         ignore_certificate,
-        no_banner,
-        no_progress_bar,
-        exit_on_connection_errors,
-        n_threads,
         http_headers,
-        include_strings,
-        ignore_strings,
         include_status_codes,
         ignore_status_codes,
-        output: output.to_owned(),
+    }
+}
+
+fn extract_dns_args<'a>(submatches: &clap::ArgMatches<'a>) -> DNSArgs {
+    let domain = submatches.value_of("domain").unwrap_or("");
+
+    DNSArgs {
+        domain: domain.to_owned(),
+    }
+}
+
+fn extract_body_args<'a>(submatches: &clap::ArgMatches<'a>) -> BodyArgs {
+    let ignore_strings: Vec<String> = if submatches.is_present("ignore-string") {
+        submatches
+            .values_of("ignore-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let include_strings: Vec<String> = if submatches.is_present("include-string") {
+        submatches
+            .values_of("include-string")
+            .unwrap()
+            .map(|h| h.to_owned())
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    BodyArgs {
+        include_strings,
+        ignore_strings,
     }
 }
