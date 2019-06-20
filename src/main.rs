@@ -49,13 +49,13 @@ fn main() {
         .about("DirBuster for rust")
         .after_help("EXAMPLES:
     1. Dir mode:
-        rustbuster -m dir -u http://localhost:3000/ -w examples/wordlist -e php
+        rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php
     2. Dns mode:
-        rustbuster -m dns -u google.com -w examples/wordlist
+        rustbuster dns -u google.com -w examples/wordlist
     3. Vhost mode:
-        rustbuster -m vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\"
+        rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\"
     4. Fuzz mode:
-        rustbuster -m fuzz -u http://localhost:3000/login \\
+        rustbuster fuzz -u http://localhost:3000/login \\
             -X POST \\
             -H \"Content-Type: application/json\" \\
             -b '{\"user\":\"FUZZ\",\"password\":\"FUZZ\",\"csrf\":\"CSRFCSRF\"}' \\
@@ -90,6 +90,7 @@ fn main() {
                     .long("domain")
                     .help("Uses the specified domain to bruteforce")
                     .short("d")
+                    .required(true)
                     .takes_value(true),
             ))
         .subcommand(set_common_args(SubCommand::with_name("fuzz"))
@@ -119,7 +120,14 @@ fn main() {
         .get_matches();
 
     let mode = matches.subcommand_name().unwrap_or("dir");
-    let submatches = matches.subcommand_matches(mode).unwrap();
+    let submatches = match matches.subcommand_matches(mode) {
+        Some(v) => v,
+        None => {
+            println!("{}", matches.usage());
+            return;
+        }
+    };
+
     let common_args = extract_common_args(submatches);
 
     if mode != "dns" {
