@@ -336,21 +336,19 @@ pub fn url_is_valid(url: &str) -> bool {
             );
             return false;
         }
-        Ok(v) => {
-            match v.scheme_part() {
-                Some(s) => {
-                    if s != "http" && s != "https" {
-                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
-                        return false;
-                    } else {
-                        return true;
-                    }
-                }
-                None => {
-                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
+        Ok(v) => match v.scheme_part() {
+            Some(s) => {
+                if s != "http" && s != "https" {
+                    error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
                     return false;
+                } else {
+                    return true;
                 }
             }
-        }
+            None => {
+                error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                return false;
+            }
+        },
     }
 }

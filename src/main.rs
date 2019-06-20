@@ -14,6 +14,7 @@ mod dnsbuster;
 mod fuzzbuster;
 mod vhostbuster;
 
+use args::*;
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
     utils::*,
@@ -30,7 +31,6 @@ use vhostbuster::{
     utils::*,
     VhostConfig,
 };
-use args::*;
 
 fn main() {
     if std::env::vars()
