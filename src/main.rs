@@ -148,6 +148,7 @@ fn main() {
     let http_args = extract_http_args(submatches);
     let dns_args = extract_dns_args(submatches);
     let body_args = extract_body_args(submatches);
+    let dir_args = extract_dir_args(submatches);
 
     if mode != "dns" {
         debug!("mode {}", mode);
@@ -252,18 +253,11 @@ fn main() {
 
     match mode {
         "dir" => {
-            let append_slash = submatches.is_present("append-slash");
-            let extensions = submatches
-                .values_of("extensions")
-                .unwrap()
-                .filter(|e| !e.is_empty())
-                .collect::<Vec<&str>>();
-            debug!("Using extensions: {:?}", extensions);
             let urls = build_urls(
                 &common_args.wordlist_paths[0],
                 &http_args.url,
-                extensions,
-                append_slash,
+                dir_args.extensions,
+                dir_args.append_slash,
             );
             let total_numbers_of_request = urls.len();
             let (tx, rx) = channel::<SingleDirScanResult>();
@@ -792,6 +786,11 @@ struct BodyArgs {
     ignore_strings: Vec<String>,
 }
 
+struct DirArgs {
+    append_slash: bool,
+    extensions: Vec<String>,
+}
+
 fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
     let wordlist_paths = submatches
         .values_of("wordlist")
@@ -924,5 +923,19 @@ fn extract_body_args<'a>(submatches: &clap::ArgMatches<'a>) -> BodyArgs {
     BodyArgs {
         include_strings,
         ignore_strings,
+    }
+}
+
+fn extract_dir_args<'a>(submatches: &clap::ArgMatches<'a>) -> DirArgs {
+    let append_slash = submatches.is_present("append-slash");
+    let extensions = submatches
+        .values_of("extensions")
+        .unwrap()
+        .filter(|e| !e.is_empty())
+        .map(|s| s.to_owned())
+        .collect::<Vec<String>>();
+    DirArgs {
+        append_slash,
+        extensions,
     }
 }
