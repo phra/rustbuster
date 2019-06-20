@@ -45,25 +45,151 @@ EXAMPLES:
             -s 200 \
             --csrf-url "http://localhost:3000/csrf" \
             --csrf-regex '\{"csrf":"(\w+)"\}'
-
 ```
 
 ### `dir` usage
 
 ```shell
+rustbuster-dir
+Directories and files enumeration mode
+
+USAGE:
+    rustbuster dir [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>...
+
+FLAGS:
+    -f, --append-slash          Tries to also append / to the base request
+    -K, --exit-on-error         Exits on connection errors
+    -h, --help                  Prints help information
+    -k, --ignore-certificate    Disables TLS certificate validation
+        --no-banner             Skips initial banner
+        --no-progress-bar       Disables the progress bar
+    -V, --version               Prints version information
+    -v, --verbose               Sets the level of verbosity
+
+OPTIONS:
+    -e, --extensions <extensions>                        Sets the extensions [default: ]
+    -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
+    -H, --http-header <http-header>...                   Appends the specified HTTP header
+    -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
+    -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
+    -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
+    -o, --output <output>                                Saves the results in the specified file [default: ]
+    -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
+    -u, --url <url>                                      Sets the target URL
+    -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
+    -w, --wordlist <wordlist>...                         Sets the wordlist
+
+EXAMPLE:
+    rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php
 ```
 
 ### `dns` usage
 
 ```shell
+rustbuster-dns
+A/AAAA entries enumeration mode
+
+USAGE:
+    rustbuster dns [FLAGS] [OPTIONS] --domain <domain> --wordlist <wordlist>...
+
+FLAGS:
+    -K, --exit-on-error      Exits on connection errors
+    -h, --help               Prints help information
+        --no-banner          Skips initial banner
+        --no-progress-bar    Disables the progress bar
+    -V, --version            Prints version information
+    -v, --verbose            Sets the level of verbosity
+
+OPTIONS:
+    -d, --domain <domain>           Uses the specified domain
+    -o, --output <output>           Saves the results in the specified file [default: ]
+    -t, --threads <threads>         Sets the amount of concurrent requests [default: 10]
+    -w, --wordlist <wordlist>...    Sets the wordlist
+
+EXAMPLE:
+    rustbuster dns -u google.com -w examples/wordlist
 ```
 
 ### `vhost` usage
 
 ```shell
+rustbuster-vhost
+Virtual hosts enumeration mode
+
+USAGE:
+    rustbuster vhost [FLAGS] [OPTIONS] --domain <domain> --url <url> --wordlist <wordlist>...
+
+FLAGS:
+    -K, --exit-on-error         Exits on connection errors
+    -h, --help                  Prints help information
+    -k, --ignore-certificate    Disables TLS certificate validation
+        --no-banner             Skips initial banner
+        --no-progress-bar       Disables the progress bar
+    -V, --version               Prints version information
+    -v, --verbose               Sets the level of verbosity
+
+OPTIONS:
+    -d, --domain <domain>                                Uses the specified domain to bruteforce
+    -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
+    -H, --http-header <http-header>...                   Appends the specified HTTP header
+    -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
+    -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
+    -x, --ignore-string <ignore-string>...               Ignores results with specified string in the HTTP Body
+    -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
+    -i, --include-string <include-string>...             Includes results with specified string in the HTTP body
+    -o, --output <output>                                Saves the results in the specified file [default: ]
+    -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
+    -u, --url <url>                                      Sets the target URL
+    -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
+    -w, --wordlist <wordlist>...                         Sets the wordlist
+
+EXAMPLE:
+    rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x "Hello"
 ```
 
 #### `fuzz` usage
 
 ```shell
+rustbuster-fuzz
+Custom fuzzing enumeration mode
+
+USAGE:
+    rustbuster fuzz [FLAGS] [OPTIONS] --url <url> --wordlist <wordlist>...
+
+FLAGS:
+    -K, --exit-on-error         Exits on connection errors
+    -h, --help                  Prints help information
+    -k, --ignore-certificate    Disables TLS certificate validation
+        --no-banner             Skips initial banner
+        --no-progress-bar       Disables the progress bar
+    -V, --version               Prints version information
+    -v, --verbose               Sets the level of verbosity
+
+OPTIONS:
+        --csrf-header <csrf-header>...                   Adds the specified headers to CSRF GET request
+        --csrf-regex <csrf-regex>                        Grabs the CSRF token applying the specified RegEx
+        --csrf-url <csrf-url>                            Grabs the CSRF token via GET to csrf-url
+    -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
+    -H, --http-header <http-header>...                   Appends the specified HTTP header
+    -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
+    -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
+    -x, --ignore-string <ignore-string>...               Ignores results with specified string in the HTTP Body
+    -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
+    -i, --include-string <include-string>...             Includes results with specified string in the HTTP body
+    -o, --output <output>                                Saves the results in the specified file [default: ]
+    -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
+    -u, --url <url>                                      Sets the target URL
+    -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
+    -w, --wordlist <wordlist>...                         Sets the wordlist
+
+EXAMPLE:
+    rustbuster fuzz -u http://localhost:3000/login \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -b '{"user":"FUZZ","password":"FUZZ","csrf":"CSRFCSRF"}' \
+        -w examples/wordlist \
+        -w /usr/share/seclists/Passwords/Common-Credentials/10-million-password-list-top-10000.txt \
+        -s 200 \
+        --csrf-url "http://localhost:3000/csrf" \
+        --csrf-regex '\{"csrf":"(\w+)"\}'
 ```
