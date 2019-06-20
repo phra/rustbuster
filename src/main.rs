@@ -145,39 +145,6 @@ fn main() {
     };
 
     let common_args = extract_common_args(submatches);
-    let http_args = extract_http_args(submatches);
-    let dns_args = extract_dns_args(submatches);
-    let body_args = extract_body_args(submatches);
-    let dir_args = extract_dir_args(submatches);
-
-    if mode != "dns" {
-        debug!("mode {}", mode);
-        match http_args.url.parse::<hyper::Uri>() {
-            Err(e) => {
-                error!(
-                    "Invalid URL: {}, consider adding a protocol like http:// or https://",
-                    e
-                );
-                return;
-            }
-            Ok(v) => {
-                match v.scheme_part() {
-                    Some(s) => {
-                        if s != "http" && s != "https" {
-                            error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
-                            return;
-                        }
-                    }
-                    None => {
-                        if mode != "dns" {
-                            error!("Invalid URL: missing protocol, consider adding http:// or https://");
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     let all_wordlists_exist = common_args
         .wordlist_paths
@@ -196,34 +163,6 @@ fn main() {
         return;
     }
 
-    debug!("Using mode: {:?}", mode);
-    debug!("Using url: {:?}", http_args.url);
-    debug!("Using wordlist: {:?}", common_args.wordlist_paths);
-    debug!("Using concurrent requests: {:?}", common_args.n_threads);
-    debug!(
-        "Using certificate validation: {:?}",
-        !http_args.ignore_certificate
-    );
-    debug!("Using HTTP headers: {:?}", http_args.http_headers);
-    debug!(
-        "Using exit on connection errors: {:?}",
-        common_args.exit_on_connection_errors
-    );
-    debug!(
-        "Including status codes: {}",
-        if http_args.include_status_codes.is_empty() {
-            String::from("ALL")
-        } else {
-            format!("{:?}", http_args.include_status_codes)
-        }
-    );
-    debug!(
-        "Excluding status codes: {:?}",
-        http_args.ignore_status_codes
-    );
-
-    // Vary the output based on how many times the user used the "verbose" flag
-    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
     match submatches.occurrences_of("verbose") {
         0 => trace!("No verbose info"),
         1 => trace!("Some verbose info"),
@@ -237,15 +176,6 @@ fn main() {
         println!("{}", banner::generate());
     }
 
-    println!(
-        "{}",
-        banner::configuration(
-            mode,
-            &http_args.url,
-            submatches.value_of("threads").unwrap(),
-            &common_args.wordlist_paths[0]
-        )
-    );
     println!("{}", banner::starting_time());
 
     let mut current_numbers_of_request = 0;
@@ -253,6 +183,12 @@ fn main() {
 
     match mode {
         "dir" => {
+            let http_args = extract_http_args(submatches);
+            if !url_is_valid(&http_args.url) {
+                return;
+            }
+
+            let dir_args = extract_dir_args(submatches);
             let urls = build_urls(
                 &common_args.wordlist_paths[0],
                 &http_args.url,
@@ -365,7 +301,8 @@ fn main() {
             }
         }
         "dns" => {
-            let domains = build_domains(&common_args.wordlist_paths[0], &http_args.url);
+            let dns_args = extract_dns_args(submatches);
+            let domains = build_domains(&common_args.wordlist_paths[0], &dns_args.domain);
             let total_numbers_of_request = domains.len();
             let (tx, rx) = channel::<SingleDnsScanResult>();
             let config = DnsConfig {
@@ -453,13 +390,15 @@ fn main() {
             }
         }
         "vhost" => {
-            if dns_args.domain.is_empty() {
-                error!("domain not specified (-d)");
+            let dns_args = extract_dns_args(submatches);
+            let body_args = extract_body_args(submatches);
+            if body_args.ignore_strings.is_empty() {
+                error!("ignore_strings not specified (-x)");
                 return;
             }
 
-            if body_args.ignore_strings.is_empty() {
-                error!("ignore_strings not specified (-x)");
+            let http_args = extract_http_args(submatches);
+            if !url_is_valid(&http_args.url) {
                 return;
             }
 
@@ -558,6 +497,12 @@ fn main() {
             }
         }
         "fuzz" => {
+            let http_args = extract_http_args(submatches);
+            if !url_is_valid(&http_args.url) {
+                return;
+            }
+
+            let body_args = extract_body_args(submatches);
             let csrf_url = match submatches.value_of("csrf-url") {
                 Some(v) => Some(v.to_owned()),
                 None => None,
@@ -619,15 +564,6 @@ fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name("no-banner")
             .long("no-banner")
             .help("Skips initial banner"),
-    )
-    .arg(
-        Arg::with_name("url")
-            .long("url")
-            .alias("domain")
-            .help("Sets the target URL")
-            .short("u")
-            .takes_value(true)
-            .required(true),
     )
     .arg(
         Arg::with_name("wordlist")
@@ -725,6 +661,15 @@ fn set_http_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .takes_value(true),
     )
+    .arg(
+        Arg::with_name("url")
+            .long("url")
+            .alias("domain")
+            .help("Sets the target URL")
+            .short("u")
+            .takes_value(true)
+            .required(true),
+    )
 }
 
 fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -733,6 +678,7 @@ fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("domain")
             .help("Uses the specified domain")
             .short("d")
+            .required(true)
             .takes_value(true),
     )
 }
@@ -937,5 +883,33 @@ fn extract_dir_args<'a>(submatches: &clap::ArgMatches<'a>) -> DirArgs {
     DirArgs {
         append_slash,
         extensions,
+    }
+}
+
+fn url_is_valid(url: &str) -> bool {
+    match url.parse::<hyper::Uri>() {
+        Err(e) => {
+            error!(
+                "Invalid URL: {}, consider adding a protocol like http:// or https://",
+                e
+            );
+            return false;
+        }
+        Ok(v) => {
+            match v.scheme_part() {
+                Some(s) => {
+                    if s != "http" && s != "https" {
+                        error!("Invalid URL: invalid protocol, only http:// or https:// are supported");
+                        return false;
+                    } else {
+                        return true;
+                    }
+                }
+                None => {
+                    error!("Invalid URL: missing protocol, consider adding http:// or https://");
+                    return false;
+                }
+            }
+        }
     }
 }
