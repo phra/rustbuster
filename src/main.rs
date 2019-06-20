@@ -65,7 +65,7 @@ fn main() {
             --csrf-url \"http://localhost:3000/csrf\" \\
             --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'
 ")
-        .subcommand(set_common_args(SubCommand::with_name("dir"))
+        .subcommand(set_http_args(set_common_args(SubCommand::with_name("dir")))
             .about("Directories and files enumeration mode")
             .arg(
                 Arg::with_name("extensions")
@@ -83,11 +83,11 @@ fn main() {
             )
             .after_help("EXAMPLE:
     rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php"))
-        .subcommand(set_common_args(SubCommand::with_name("dns"))
+        .subcommand(set_dns_args(set_common_args(SubCommand::with_name("dns")))
             .about("A/AAAA entries enumeration mode")
             .after_help("EXAMPLE:
     rustbuster dns -u google.com -w examples/wordlist"))
-        .subcommand(set_common_args(SubCommand::with_name("vhost"))
+        .subcommand(set_body_args(set_http_args(set_common_args(SubCommand::with_name("vhost"))))
             .about("Virtual hosts enumeration mode")
             .arg(
                 Arg::with_name("domain")
@@ -99,7 +99,7 @@ fn main() {
             )
             .after_help("EXAMPLE:
     rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\""))
-        .subcommand(set_common_args(SubCommand::with_name("fuzz"))
+        .subcommand(set_body_args(set_http_args(set_common_args(SubCommand::with_name("fuzz"))))
             .about("Custom fuzzing enumeration mode")
                     .arg(
                 Arg::with_name("csrf-url")
@@ -145,10 +145,13 @@ fn main() {
     };
 
     let common_args = extract_common_args(submatches);
+    let http_args = extract_http_args(submatches);
+    let dns_args = extract_dns_args(submatches);
+    let body_args = extract_body_args(submatches);
 
     if mode != "dns" {
         debug!("mode {}", mode);
-        match common_args.url.parse::<hyper::Uri>() {
+        match http_args.url.parse::<hyper::Uri>() {
             Err(e) => {
                 error!(
                     "Invalid URL: {}, consider adding a protocol like http:// or https://",
@@ -193,29 +196,29 @@ fn main() {
     }
 
     debug!("Using mode: {:?}", mode);
-    debug!("Using url: {:?}", common_args.url);
+    debug!("Using url: {:?}", http_args.url);
     debug!("Using wordlist: {:?}", common_args.wordlist_paths);
     debug!("Using concurrent requests: {:?}", common_args.n_threads);
     debug!(
         "Using certificate validation: {:?}",
-        !common_args.ignore_certificate
+        !http_args.ignore_certificate
     );
-    debug!("Using HTTP headers: {:?}", common_args.http_headers);
+    debug!("Using HTTP headers: {:?}", http_args.http_headers);
     debug!(
         "Using exit on connection errors: {:?}",
         common_args.exit_on_connection_errors
     );
     debug!(
         "Including status codes: {}",
-        if common_args.include_status_codes.is_empty() {
+        if http_args.include_status_codes.is_empty() {
             String::from("ALL")
         } else {
-            format!("{:?}", common_args.include_status_codes)
+            format!("{:?}", http_args.include_status_codes)
         }
     );
     debug!(
         "Excluding status codes: {:?}",
-        common_args.ignore_status_codes
+        http_args.ignore_status_codes
     );
 
     // Vary the output based on how many times the user used the "verbose" flag
@@ -237,7 +240,7 @@ fn main() {
         "{}",
         banner::configuration(
             mode,
-            &common_args.url,
+            &http_args.url,
             submatches.value_of("threads").unwrap(),
             &common_args.wordlist_paths[0]
         )
@@ -258,7 +261,7 @@ fn main() {
             debug!("Using extensions: {:?}", extensions);
             let urls = build_urls(
                 &common_args.wordlist_paths[0],
-                &common_args.url,
+                &http_args.url,
                 extensions,
                 append_slash,
             );
@@ -266,15 +269,15 @@ fn main() {
             let (tx, rx) = channel::<SingleDirScanResult>();
             let config = DirConfig {
                 n_threads: common_args.n_threads,
-                ignore_certificate: common_args.ignore_certificate,
-                http_method: common_args.http_method.to_owned(),
-                http_body: common_args.http_body.to_owned(),
-                user_agent: common_args.user_agent.to_owned(),
-                http_headers: common_args.http_headers.clone(),
+                ignore_certificate: http_args.ignore_certificate,
+                http_method: http_args.http_method.to_owned(),
+                http_body: http_args.http_body.to_owned(),
+                user_agent: http_args.user_agent.to_owned(),
+                http_headers: http_args.http_headers.clone(),
             };
             let rp_config = ResultProcessorConfig {
-                include: common_args.include_status_codes,
-                ignore: common_args.ignore_status_codes,
+                include: http_args.include_status_codes,
+                ignore: http_args.ignore_status_codes,
             };
             let mut result_processor = ScanResult::new(rp_config);
             let bar = if common_args.no_progress_bar {
@@ -368,7 +371,7 @@ fn main() {
             }
         }
         "dns" => {
-            let domains = build_domains(&common_args.wordlist_paths[0], &common_args.url);
+            let domains = build_domains(&common_args.wordlist_paths[0], &http_args.url);
             let total_numbers_of_request = domains.len();
             let (tx, rx) = channel::<SingleDnsScanResult>();
             let config = DnsConfig {
@@ -456,26 +459,26 @@ fn main() {
             }
         }
         "vhost" => {
-            if common_args.domain.is_empty() {
+            if dns_args.domain.is_empty() {
                 error!("domain not specified (-d)");
                 return;
             }
 
-            if common_args.ignore_strings.is_empty() {
+            if body_args.ignore_strings.is_empty() {
                 error!("ignore_strings not specified (-x)");
                 return;
             }
 
-            let vhosts = build_vhosts(&common_args.wordlist_paths[0], &common_args.domain);
+            let vhosts = build_vhosts(&common_args.wordlist_paths[0], &dns_args.domain);
             let total_numbers_of_request = vhosts.len();
             let (tx, rx) = channel::<SingleVhostScanResult>();
             let config = VhostConfig {
                 n_threads: common_args.n_threads,
-                ignore_certificate: common_args.ignore_certificate,
-                http_method: common_args.http_method.to_owned(),
-                user_agent: common_args.user_agent.to_owned(),
-                ignore_strings: common_args.ignore_strings,
-                original_url: common_args.url.to_owned(),
+                ignore_certificate: http_args.ignore_certificate,
+                http_method: http_args.http_method.to_owned(),
+                user_agent: http_args.user_agent.to_owned(),
+                ignore_strings: body_args.ignore_strings,
+                original_url: http_args.url.to_owned(),
             };
             let mut result_processor = VhostScanResult::new();
             let bar = if common_args.no_progress_bar {
@@ -583,20 +586,20 @@ fn main() {
                 };
             let fuzzbuster = FuzzBuster {
                 n_threads: common_args.n_threads,
-                ignore_certificate: common_args.ignore_certificate,
-                http_method: common_args.http_method.to_owned(),
-                http_body: common_args.http_body.to_owned(),
-                user_agent: common_args.user_agent.to_owned(),
-                http_headers: common_args.http_headers,
+                ignore_certificate: http_args.ignore_certificate,
+                http_method: http_args.http_method.to_owned(),
+                http_body: http_args.http_body.to_owned(),
+                user_agent: http_args.user_agent.to_owned(),
+                http_headers: http_args.http_headers,
                 wordlist_paths: common_args.wordlist_paths,
-                url: common_args.url.to_owned(),
-                ignore_status_codes: common_args.ignore_status_codes,
-                include_status_codes: common_args.include_status_codes,
+                url: http_args.url.to_owned(),
+                ignore_status_codes: http_args.ignore_status_codes,
+                include_status_codes: http_args.include_status_codes,
                 no_progress_bar: common_args.no_progress_bar,
                 exit_on_connection_errors: common_args.exit_on_connection_errors,
                 output: common_args.output.to_owned(),
-                include_body: common_args.include_strings,
-                ignore_body: common_args.ignore_strings,
+                include_body: body_args.include_strings,
+                ignore_body: body_args.ignore_strings,
                 csrf_url,
                 csrf_regex,
                 csrf_headers,
@@ -728,7 +731,20 @@ fn set_http_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .takes_value(true),
     )
-    .arg(
+}
+
+fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("domain")
+            .long("domain")
+            .help("Uses the specified domain")
+            .short("d")
+            .takes_value(true),
+    )
+}
+
+fn set_body_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
         Arg::with_name("ignore-string")
             .long("ignore-string")
             .help("Ignores results with specified string in the HTTP Body")
