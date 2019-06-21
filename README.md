@@ -113,11 +113,11 @@ EXAMPLE:
 ### `vhost` usage
 
 ```shell
-rustbuster-vhost
+rustbuster-vhost 
 Virtual hosts enumeration mode
 
 USAGE:
-    rustbuster vhost [FLAGS] [OPTIONS] --domain <domain> --url <url> --wordlist <wordlist>...
+    rustbuster vhost [FLAGS] [OPTIONS] --domain <domain> --ignore-string <ignore-string>... --url <url> --wordlist <wordlist>...
 
 FLAGS:
     -K, --exit-on-error         Exits on connection errors
@@ -130,13 +130,12 @@ FLAGS:
 
 OPTIONS:
     -d, --domain <domain>                                Uses the specified domain to bruteforce
-    -b, --http-body <http-body>                          Uses the specified HTTP method [default: ]
+    -b, --http-body <http-body>                          Uses the specified HTTP body [default: ]
     -H, --http-header <http-header>...                   Appends the specified HTTP header
     -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
     -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
-    -x, --ignore-string <ignore-string>...               Ignores results with specified string in the HTTP Body
+    -x, --ignore-string <ignore-string>...               Ignores results with specified string in the HTTP body
     -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
-    -i, --include-string <include-string>...             Includes results with specified string in the HTTP body
     -o, --output <output>                                Saves the results in the specified file [default: ]
     -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
     -u, --url <url>                                      Sets the target URL
