@@ -3,7 +3,7 @@ extern crate log;
 #[macro_use]
 extern crate clap;
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, SubCommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{sync::mpsc::channel, thread, time::SystemTime};
 
@@ -65,64 +65,20 @@ fn main() {
             --csrf-url \"http://localhost:3000/csrf\" \\
             --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'
 ")
-        .subcommand(set_http_args(set_common_args(SubCommand::with_name("dir")))
+        .subcommand(set_dir_args(set_http_args(set_common_args(SubCommand::with_name("dir"))))
             .about("Directories and files enumeration mode")
-            .arg(
-                Arg::with_name("extensions")
-                    .long("extensions")
-                    .help("Sets the extensions")
-                    .short("e")
-                    .default_value("")
-                    .use_delimiter(true),
-            )
-            .arg(
-                Arg::with_name("append-slash")
-                    .long("append-slash")
-                    .help("Tries to also append / to the base request")
-                    .short("f"),
-            )
             .after_help("EXAMPLE:
     rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php"))
         .subcommand(set_dns_args(set_common_args(SubCommand::with_name("dns")))
             .about("A/AAAA entries enumeration mode")
             .after_help("EXAMPLE:
     rustbuster dns -u google.com -w examples/wordlist"))
-        .subcommand(set_body_args(set_http_args(set_common_args(SubCommand::with_name("vhost"))))
+        .subcommand(set_vhost_args(set_http_args(set_common_args(SubCommand::with_name("vhost"))))
             .about("Virtual hosts enumeration mode")
-            .arg(
-                Arg::with_name("domain")
-                    .long("domain")
-                    .help("Uses the specified domain to bruteforce")
-                    .short("d")
-                    .required(true)
-                    .takes_value(true),
-            )
             .after_help("EXAMPLE:
     rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\""))
-        .subcommand(set_body_args(set_http_args(set_common_args(SubCommand::with_name("fuzz"))))
+        .subcommand(set_fuzz_args(set_body_args(set_http_args(set_common_args(SubCommand::with_name("fuzz")))))
             .about("Custom fuzzing enumeration mode")
-                    .arg(
-                Arg::with_name("csrf-url")
-                    .long("csrf-url")
-                    .help("Grabs the CSRF token via GET to csrf-url")
-                    .requires("csrf-regex")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("csrf-regex")
-                    .long("csrf-regex")
-                    .help("Grabs the CSRF token applying the specified RegEx")
-                    .requires("csrf-url")
-                    .takes_value(true),
-            )
-            .arg(
-                Arg::with_name("csrf-header")
-                    .long("csrf-header")
-                    .help("Adds the specified headers to CSRF GET request")
-                    .requires("csrf-url")
-                    .multiple(true)
-                    .takes_value(true),
-            )
             .after_help("EXAMPLE:
     rustbuster fuzz -u http://localhost:3000/login \\
         -X POST \\
@@ -392,11 +348,6 @@ fn main() {
         "vhost" => {
             let dns_args = extract_dns_args(submatches);
             let body_args = extract_body_args(submatches);
-            if body_args.ignore_strings.is_empty() {
-                error!("ignore_strings not specified (-x)");
-                return;
-            }
-
             let http_args = extract_http_args(submatches);
             if !url_is_valid(&http_args.url) {
                 return;
@@ -503,26 +454,8 @@ fn main() {
             }
 
             let body_args = extract_body_args(submatches);
-            let csrf_url = match submatches.value_of("csrf-url") {
-                Some(v) => Some(v.to_owned()),
-                None => None,
-            };
-            let csrf_regex = match submatches.value_of("csrf-regex") {
-                Some(v) => Some(v.to_owned()),
-                None => None,
-            };
-            let csrf_headers: Option<Vec<(String, String)>> =
-                if submatches.is_present("csrf-header") {
-                    Some(
-                        submatches
-                            .values_of("csrf-header")
-                            .unwrap()
-                            .map(|h| fuzzbuster::utils::split_http_headers(h))
-                            .collect(),
-                    )
-                } else {
-                    None
-                };
+            let fuzz_args = extract_fuzz_args(submatches);
+
             let fuzzbuster = FuzzBuster {
                 n_threads: common_args.n_threads,
                 ignore_certificate: http_args.ignore_certificate,
@@ -539,9 +472,9 @@ fn main() {
                 output: common_args.output.to_owned(),
                 include_body: body_args.include_strings,
                 ignore_body: body_args.ignore_strings,
-                csrf_url,
-                csrf_regex,
-                csrf_headers,
+                csrf_url: fuzz_args.csrf_url,
+                csrf_regex: fuzz_args.csrf_regex,
+                csrf_headers: fuzz_args.csrf_headers,
             };
 
             debug!("FuzzBuster {:#?}", fuzzbuster);

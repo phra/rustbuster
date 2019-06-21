@@ -35,6 +35,12 @@ pub struct DirArgs {
     pub extensions: Vec<String>,
 }
 
+pub struct FuzzArgs {
+    pub csrf_url: Option<String>,
+    pub csrf_regex: Option<String>,
+    pub csrf_headers: Option<Vec<(String, String)>>,
+}
+
 pub fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("verbose")
@@ -131,7 +137,7 @@ pub fn set_http_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     .arg(
         Arg::with_name("http-body")
             .long("http-body")
-            .help("Uses the specified HTTP method")
+            .help("Uses the specified HTTP body")
             .short("b")
             .default_value("")
             .takes_value(true),
@@ -155,22 +161,11 @@ pub fn set_http_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.arg(
-        Arg::with_name("domain")
-            .long("domain")
-            .help("Uses the specified domain")
-            .short("d")
-            .required(true)
-            .takes_value(true),
-    )
-}
-
 pub fn set_body_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("ignore-string")
             .long("ignore-string")
-            .help("Ignores results with specified string in the HTTP Body")
+            .help("Ignores results with specified string in the HTTP body")
             .short("x")
             .multiple(true)
             .takes_value(true),
@@ -182,6 +177,79 @@ pub fn set_body_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("i")
             .multiple(true)
             .conflicts_with("ignore-string")
+            .takes_value(true),
+    )
+}
+
+pub fn set_dir_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("extensions")
+            .long("extensions")
+            .help("Sets the extensions")
+            .short("e")
+            .default_value("")
+            .use_delimiter(true),
+    )
+    .arg(
+        Arg::with_name("append-slash")
+            .long("append-slash")
+            .help("Tries to also append / to the base request")
+            .short("f"),
+    )
+}
+
+pub fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("domain")
+            .long("domain")
+            .help("Uses the specified domain")
+            .short("d")
+            .required(true)
+            .takes_value(true),
+    )
+}
+
+pub fn set_vhost_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("domain")
+            .long("domain")
+            .help("Uses the specified domain to bruteforce")
+            .short("d")
+            .required(true)
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("ignore-string")
+            .long("ignore-string")
+            .help("Ignores results with specified string in the HTTP body")
+            .short("x")
+            .required(true)
+            .multiple(true)
+            .takes_value(true),
+    )
+}
+
+pub fn set_fuzz_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("csrf-url")
+            .long("csrf-url")
+            .help("Grabs the CSRF token via GET to csrf-url")
+            .requires("csrf-regex")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("csrf-regex")
+            .long("csrf-regex")
+            .help("Grabs the CSRF token applying the specified RegEx")
+            .requires("csrf-url")
+            .takes_value(true),
+    )
+    .arg(
+        Arg::with_name("csrf-header")
+            .long("csrf-header")
+            .help("Adds the specified headers to CSRF GET request")
+            .requires("csrf-url")
+            .multiple(true)
             .takes_value(true),
     )
 }
@@ -324,6 +392,34 @@ pub fn extract_dir_args<'a>(submatches: &clap::ArgMatches<'a>) -> DirArgs {
     DirArgs {
         append_slash,
         extensions,
+    }
+}
+
+pub fn extract_fuzz_args<'a>(submatches: &clap::ArgMatches<'a>) -> FuzzArgs {
+    let csrf_url = match submatches.value_of("csrf-url") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+    let csrf_regex = match submatches.value_of("csrf-regex") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+    let csrf_headers: Option<Vec<(String, String)>> =
+        if submatches.is_present("csrf-header") {
+            Some(
+                submatches
+                    .values_of("csrf-header")
+                    .unwrap()
+                    .map(|h| crate::fuzzbuster::utils::split_http_headers(h))
+                    .collect(),
+            )
+        } else {
+            None
+        };
+    FuzzArgs {
+        csrf_url,
+        csrf_regex,
+        csrf_headers,
     }
 }
 
