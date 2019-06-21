@@ -404,18 +404,17 @@ pub fn extract_fuzz_args<'a>(submatches: &clap::ArgMatches<'a>) -> FuzzArgs {
         Some(v) => Some(v.to_owned()),
         None => None,
     };
-    let csrf_headers: Option<Vec<(String, String)>> =
-        if submatches.is_present("csrf-header") {
-            Some(
-                submatches
-                    .values_of("csrf-header")
-                    .unwrap()
-                    .map(|h| crate::fuzzbuster::utils::split_http_headers(h))
-                    .collect(),
-            )
-        } else {
-            None
-        };
+    let csrf_headers: Option<Vec<(String, String)>> = if submatches.is_present("csrf-header") {
+        Some(
+            submatches
+                .values_of("csrf-header")
+                .unwrap()
+                .map(|h| crate::fuzzbuster::utils::split_http_headers(h))
+                .collect(),
+        )
+    } else {
+        None
+    };
     FuzzArgs {
         csrf_url,
         csrf_regex,
