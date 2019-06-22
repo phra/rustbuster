@@ -1,0 +1,52 @@
+use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Write, path::Path, str};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum FSObject {
+    File,
+    Directory,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SingleTildeScanResult {
+    pub filename: String,
+    pub extension: String,
+    pub kind: FSObject,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TildeScanProcessor {
+    pub results: Vec<SingleTildeScanResult>,
+}
+
+impl TildeScanProcessor {
+    pub fn new() -> Self {
+        TildeScanProcessor {
+            results: Vec::<SingleTildeScanResult>::new(),
+        }
+    }
+
+    pub fn maybe_add_result(&mut self, res: SingleTildeScanResult) -> bool {
+        trace!("{:?}", res);
+        self.results.push(res);
+        return true;
+    }
+
+    pub fn save_tilde_results(&self, path: &str) {
+        let json_string = serde_json::to_string(&self.results).unwrap();
+
+        let mut file = match File::create(Path::new(path)) {
+            Ok(f) => f,
+            Err(e) => {
+                error!("Error while creating file: {}\n{}", path, e);
+                return;
+            }
+        };
+
+        match file.write_all(json_string.as_bytes()) {
+            Ok(_) => debug!("Results saved to: {}", path),
+            Err(e) => error!("Error while writing results to file: {}\n{}", path, e),
+        };
+    }
+}

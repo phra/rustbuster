@@ -13,6 +13,7 @@ mod dirbuster;
 mod dnsbuster;
 mod fuzzbuster;
 mod vhostbuster;
+mod tildebuster;
 
 use args::*;
 use dirbuster::{
