@@ -37,12 +37,13 @@ pub struct TildeBuster {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TildeRequest {
-    pub uri: hyper::Uri,
+    pub url: String,
     pub http_method: String,
     pub http_headers: Vec<(String, String)>,
     pub http_body: String,
     pub user_agent: String,
-    pub prefix: String,
+    pub filename: String,
+    pub extension: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,26 +98,27 @@ impl TildeBuster {
                 futures::future::ok(version.clone()).join(self.check_if_vulnerable(&client, version))
                     .and_then(move |(version, is_vulnerable)| {
                         debug!("iis version: {:?}", version);
-                        debug!("is vulerable: {:?}", is_vulnerable);
+                        debug!("is vulnerable: {:?}", is_vulnerable);
 
                         let stream = futures::stream::iter_ok(chars)
                             .map(move |c| {
                                 let request = TildeRequest {
-                                    uri: self.url.parse::<hyper::Uri>().unwrap(),
+                                    url: self.url.clone(),
                                     http_method: self.http_method.clone(),
                                     http_headers: self.http_headers.clone(),
                                     http_body: self.http_body.clone(),
                                     user_agent: self.user_agent.clone(),
-                                    prefix: c,
+                                    filename: c,
+                                    extension: "".to_owned(),
                                 };
 
-                                TildeBuster::make_request_future(tx.clone(), client.clone(), request)
+                                TildeBuster::_brute_filename(tx.clone(), client.clone(), request)
                             })
                         .buffer_unordered(n_threads)
                         .for_each(Ok)
                         .map_err(|err| eprintln!("Err {:?}", err));
 
-                        let _ = thread::spawn(move || rt::run(stream));
+                        rt::spawn(stream);
                         Ok(())
                     })
             })
@@ -200,11 +202,79 @@ impl TildeBuster {
         }
     }
 
-    fn make_request_future(
+    fn _brute_filename(
         tx: Sender<SingleTildeScanResult>,
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
+        let tx1 = tx.clone();
+        let tx2 = tx.clone();
+        if request.filename.len() == 6 {
+            rt::spawn(TildeBuster::_has_extension(tx.clone(), client.clone(), request.clone())
+                .and_then(move |has_extension| {
+                    if !has_extension {
+                        // DIRECTORY FOUND
+                    } else {
+                        rt::spawn(TildeBuster::_brute_extension(tx1, client, request));
+                    }
+
+                    futures::future::ok(())
+                })
+                .or_else(|e| {
+                    error!("{}", e);
+                    Ok(())
+                }));
+        } else {
+            rt::spawn(TildeBuster::_filename_exists(tx.clone(), client, request)
+                .and_then(move |exists| {
+                    if exists {
+                        rt::spawn(TildeBuster::_brute_filename(tx2, client, request));
+                    }
+
+                    futures::future::ok(())
+                })
+                .or_else(|e| {
+                    error!("{}", e);
+                    Ok(())
+                }));
+        }
+
+        futures::future::ok(())
+    }
+
+    fn _filename_exists(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = bool, Error = hyper::Error> {
+        futures::future::ok(true)
+    }
+
+    fn _extension_exists(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = bool, Error = hyper::Error> {
+        futures::future::ok(true)
+    }
+
+    fn _has_extension(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = bool, Error = hyper::Error> {
+        futures::future::ok(true)
+    }
+
+    fn _brute_extension(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = (), Error = ()> {
+        if request.extension.len() == 3 {
+            // FILE FOUND
+        }
+
         futures::future::ok(())
     }
 
