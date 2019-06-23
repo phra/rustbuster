@@ -13,7 +13,7 @@ use std::thread;
 
 pub mod result_processor;
 
-use result_processor::{TildeScanProcessor, SingleTildeScanResult, FSObject};
+use result_processor::{TildeScanProcessor, SingleTildeScanResult, FSObject, TildeRequest};
 
 use std::{fs, time::SystemTime};
 
@@ -33,17 +33,6 @@ pub struct TildeBuster {
     pub no_progress_bar: bool,
     pub exit_on_connection_errors: bool,
     pub output: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TildeRequest {
-    pub url: String,
-    pub http_method: String,
-    pub http_headers: Vec<(String, String)>,
-    pub http_body: String,
-    pub user_agent: String,
-    pub filename: String,
-    pub extension: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,6 +77,9 @@ impl TildeBuster {
         } else {
             ProgressBar::new(total_numbers_of_request as u64)
         };
+        let tx1 = tx.clone();
+        let client1 = client.clone();
+        let chars1 = chars.clone();
         bar.set_draw_delta(100);
         bar.set_style(ProgressStyle::default_bar()
             .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
@@ -157,38 +149,50 @@ impl TildeBuster {
                         break;
                     }
                 }
-                None => (),
-            }
-
-            result_processor.maybe_add_result(msg.clone());
-
-            match msg.kind {
-                FSObject::File => {
-                    if no_progress_bar {
-                        println!(
-                            "File\t{}.{}",
-                            msg.filename,
-                            msg.extension,
-                        );
-                    } else {
-                        bar.println(format!(
-                            "File\t{}.{}",
-                            msg.filename,
-                            msg.extension,
-                        ));
-                    }
-                },
-                FSObject::Directory => {
-                    if no_progress_bar {
-                        println!(
-                            "Directory\t{}",
-                            msg.filename,
-                        );
-                    } else {
-                        bar.println(format!(
-                            "Directory\t{}",
-                            msg.filename,
-                        ));
+                None => {
+                    match msg.kind {
+                        FSObject::File => {
+                            if no_progress_bar {
+                                println!(
+                                    "File\t{}.{}",
+                                    msg.filename,
+                                    msg.extension,
+                                );
+                            } else {
+                                bar.println(format!(
+                                    "File\t{}.{}",
+                                    msg.filename,
+                                    msg.extension,
+                                ));
+                            }
+                        },
+                        FSObject::Directory => {
+                            if no_progress_bar {
+                                println!(
+                                    "Directory\t{}",
+                                    msg.filename,
+                                );
+                            } else {
+                                bar.println(format!(
+                                    "Directory\t{}",
+                                    msg.filename,
+                                ));
+                            }
+                        },
+                        FSObject::Existing => {
+                            if msg.filename.len() < 6 {
+                                for c in chars1.iter() {
+                                    let mut request = msg.request.clone();
+                                    request.filename = format!("{}{}", msg.filename, c);
+                                    rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
+                                }
+                            } else {
+                                rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), msg.request.clone()));
+                            }
+                        },
+                        FSObject::NotExisting => {
+                            trace!("{:?}", msg);
+                        },
                     }
                 },
             }
@@ -207,38 +211,6 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        let tx1 = tx.clone();
-        let tx2 = tx.clone();
-        if request.filename.len() == 6 {
-            rt::spawn(TildeBuster::_has_extension(tx.clone(), client.clone(), request.clone())
-                .and_then(move |has_extension| {
-                    if !has_extension {
-                        // DIRECTORY FOUND
-                    } else {
-                        rt::spawn(TildeBuster::_brute_extension(tx1, client, request));
-                    }
-
-                    futures::future::ok(())
-                })
-                .or_else(|e| {
-                    error!("{}", e);
-                    Ok(())
-                }));
-        } else {
-            rt::spawn(TildeBuster::_filename_exists(tx.clone(), client, request)
-                .and_then(move |exists| {
-                    if exists {
-                        rt::spawn(TildeBuster::_brute_filename(tx2, client, request));
-                    }
-
-                    futures::future::ok(())
-                })
-                .or_else(|e| {
-                    error!("{}", e);
-                    Ok(())
-                }));
-        }
-
         futures::future::ok(())
     }
 
@@ -271,10 +243,6 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        if request.extension.len() == 3 {
-            // FILE FOUND
-        }
-
         futures::future::ok(())
     }
 

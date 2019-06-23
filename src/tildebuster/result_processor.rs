@@ -5,6 +5,19 @@ use std::{fs::File, io::Write, path::Path, str};
 pub enum FSObject {
     File,
     Directory,
+    Existing,
+    NotExisting,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct TildeRequest {
+    pub url: String,
+    pub http_method: String,
+    pub http_headers: Vec<(String, String)>,
+    pub http_body: String,
+    pub user_agent: String,
+    pub filename: String,
+    pub extension: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -13,6 +26,7 @@ pub struct SingleTildeScanResult {
     pub extension: String,
     pub kind: FSObject,
     pub error: Option<String>,
+    pub request: TildeRequest,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
