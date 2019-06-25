@@ -87,32 +87,133 @@ impl TildeBuster {
 
         let fut = self.check_iis_version(&client)
             .and_then(move |version| {
-                futures::future::ok(version.clone()).join(self.check_if_vulnerable(&client, version)) // TODO: make it exit if not vulnerable
+                futures::future::ok(version.clone())
+                    .join(self.check_if_vulnerable(&client, version))
                     .and_then(move |(version, is_vulnerable)| {
                         debug!("iis version: {:?}", version);
                         debug!("is vulnerable: {:?}", is_vulnerable);
 
-                        let stream = futures::stream::iter_ok(chars)
-                            .map(move |c| {
-                                let request = TildeRequest {
-                                    url: self.url.clone(),
-                                    http_method: self.http_method.clone(),
-                                    http_headers: self.http_headers.clone(),
-                                    http_body: self.http_body.clone(),
-                                    user_agent: self.user_agent.clone(),
-                                    filename: c,
-                                    extension: "".to_owned(),
+                        if !is_vulnerable {
+                            error!("The target doesn't seem to be vulnerable");
+                            warn!("Try setting HTTP method to OPTIONS or add an extension like aspx");
+                            Ok(())
+                        } else {
+                            let stream = futures::stream::iter_ok(chars)
+                                .map(move |c| {
+                                    let request = TildeRequest {
+                                        url: self.url.clone(),
+                                        http_method: self.http_method.clone(),
+                                        http_headers: self.http_headers.clone(),
+                                        http_body: self.http_body.clone(),
+                                        user_agent: self.user_agent.clone(),
+                                        filename: c,
+                                        extension: "".to_owned(),
+                                    };
+
+                                    TildeBuster::_brute_filename(tx.clone(), client.clone(), request)
+                                })
+                                .buffer_unordered(n_threads)
+                                .for_each(Ok)
+                                .map_err(|err| eprintln!("Err {:?}", err));
+
+                            rt::spawn(stream);
+
+                            loop {
+                                current_numbers_of_request = current_numbers_of_request + 1;
+                                bar.inc(1);
+                                let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
+                                if seconds_from_start != 0 {
+                                    bar.set_message(
+                                        &(current_numbers_of_request as u64 / seconds_from_start as u64).to_string(),
+                                    );
+                                } else {
+                                    bar.set_message("warming up...")
+                                }
+
+                                let msg = match rx.recv() {
+                                    Ok(msg) => msg,
+                                    Err(_err) => {
+                                        error!("{:?}", _err);
+                                        break;
+                                    }
                                 };
 
-                                TildeBuster::_brute_filename(tx.clone(), client.clone(), request)
-                            })
-                        .buffer_unordered(n_threads)
-                        .for_each(Ok)
-                        .map_err(|err| eprintln!("Err {:?}", err));
+                                match &msg.error {
+                                    Some(e) => {
+                                        error!("{:?}", e);
+                                        if current_numbers_of_request == 1 || exit_on_connection_errors {
+                                            warn!("Check connectivity to the target");
+                                            break;
+                                        }
+                                    }
+                                    None => {
+                                        match msg.kind {
+                                            FSObject::NOT_EXISTING => {
+                                                trace!("{:?}", msg);
+                                            },
+                                            FSObject::FILE => {
+                                                if no_progress_bar {
+                                                    println!(
+                                                        "File\t{}.{}",
+                                                        msg.request.filename,
+                                                        msg.request.extension,
+                                                    );
+                                                } else {
+                                                    bar.println(format!(
+                                                        "File\t{}.{}",
+                                                        msg.request.filename,
+                                                        msg.request.extension,
+                                                    ));
+                                                }
 
-                        rt::spawn(stream);
-                        Ok(())
-                    })
+                                                result_processor.maybe_add_result(msg);
+                                            },
+                                            FSObject::DIRECTORY => {
+                                                if no_progress_bar {
+                                                    println!(
+                                                        "Directory\t{}",
+                                                        msg.request.filename,
+                                                    );
+                                                } else {
+                                                    bar.println(format!(
+                                                        "Directory\t{}",
+                                                        msg.request.filename,
+                                                    ));
+                                                }
+
+                                                result_processor.maybe_add_result(msg);
+                                            },
+                                            FSObject::BRUTE_EXTENSION => {
+                                                for c in chars1.iter() {
+                                                    let mut request = msg.request.clone();
+                                                    request.extension = format!("{}{}", request.extension, c);
+                                                    rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), request));
+                                                }
+                                            },
+                                            FSObject::BRUTE_FILENAME => {
+                                                for c in chars1.iter() {
+                                                    let mut request = msg.request.clone();
+                                                    request.filename = format!("{}{}", request.filename, c);
+                                                    rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
+                                                }
+                                            },
+                                            FSObject::CHECK_IF_DIRECTORY => {
+                                                rt::spawn(TildeBuster::_check_if_directory(tx1.clone(), client1.clone(), msg.request));
+                                            },
+                                        }
+                                    },
+                                }
+                            }
+
+                            bar.finish();
+                            println!("{}", crate::banner::ending_time());
+
+                            if !output.is_empty() {
+                                result_processor.save_tilde_results(&output);
+                            }
+                            Ok(())
+                    }
+                })
             })
             .or_else(|e| {
                 error!("{}", e);
@@ -120,100 +221,6 @@ impl TildeBuster {
             });
 
         let _ = thread::spawn(move || rt::run(fut));
-
-        loop {
-            current_numbers_of_request = current_numbers_of_request + 1;
-            bar.inc(1);
-            let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
-            if seconds_from_start != 0 {
-                bar.set_message(
-                    &(current_numbers_of_request as u64 / seconds_from_start as u64).to_string(),
-                );
-            } else {
-                bar.set_message("warming up...")
-            }
-
-            let msg = match rx.recv() {
-                Ok(msg) => msg,
-                Err(_err) => {
-                    error!("{:?}", _err);
-                    break;
-                }
-            };
-
-            match &msg.error {
-                Some(e) => {
-                    error!("{:?}", e);
-                    if current_numbers_of_request == 1 || exit_on_connection_errors {
-                        warn!("Check connectivity to the target");
-                        break;
-                    }
-                }
-                None => {
-                    match msg.kind {
-                        FSObject::NOT_EXISTING => {
-                            trace!("{:?}", msg);
-                        },
-                        FSObject::FILE => {
-                            if no_progress_bar {
-                                println!(
-                                    "File\t{}.{}",
-                                    msg.request.filename,
-                                    msg.request.extension,
-                                );
-                            } else {
-                                bar.println(format!(
-                                    "File\t{}.{}",
-                                    msg.request.filename,
-                                    msg.request.extension,
-                                ));
-                            }
-
-                            result_processor.maybe_add_result(msg);
-                        },
-                        FSObject::DIRECTORY => {
-                            if no_progress_bar {
-                                println!(
-                                    "Directory\t{}",
-                                    msg.request.filename,
-                                );
-                            } else {
-                                bar.println(format!(
-                                    "Directory\t{}",
-                                    msg.request.filename,
-                                ));
-                            }
-
-                            result_processor.maybe_add_result(msg);
-                        },
-                        FSObject::BRUTE_EXTENSION => {
-                            for c in chars1.iter() {
-                                let mut request = msg.request.clone();
-                                request.extension = format!("{}{}", request.extension, c);
-                                rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), request));
-                            }
-                        },
-                        FSObject::BRUTE_FILENAME => {
-                            for c in chars1.iter() {
-                                let mut request = msg.request.clone();
-                                request.filename = format!("{}{}", request.filename, c);
-                                rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
-                            }
-                        },
-                        FSObject::CHECK_IF_DIRECTORY => {
-                            rt::spawn(TildeBuster::_check_if_directory(tx1.clone(), client1.clone(), msg.request));
-                        },
-                    }
-                },
-            }
-        }
-
-        bar.finish();
-        println!("{}", crate::banner::ending_time());
-
-        if !output.is_empty() {
-            result_processor.save_tilde_results(&output);
-        }
     }
 
     fn _brute_extension(
