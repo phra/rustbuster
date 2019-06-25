@@ -5,8 +5,9 @@ use std::{fs::File, io::Write, path::Path, str};
 pub enum FSObject {
     FILE,
     DIRECTORY,
-    EXISTING_DIRECTORY,
-    EXISTING_FILE,
+    BRUTE_FILENAME,
+    BRUTE_EXTENSION,
+    CHECK_IF_DIRECTORY,
     NOT_EXISTING,
 }
 
