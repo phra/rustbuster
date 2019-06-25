@@ -87,7 +87,7 @@ impl TildeBuster {
 
         let fut = self.check_iis_version(&client)
             .and_then(move |version| {
-                futures::future::ok(version.clone()).join(self.check_if_vulnerable(&client, version))
+                futures::future::ok(version.clone()).join(self.check_if_vulnerable(&client, version)) // TODO: make it exit if not vulnerable
                     .and_then(move |(version, is_vulnerable)| {
                         debug!("iis version: {:?}", version);
                         debug!("is vulnerable: {:?}", is_vulnerable);
@@ -233,7 +233,7 @@ impl TildeBuster {
             .request(hyper_request)
             .and_then(move |res| {
                 match (res.status(), request.extension.len()) {
-                    (hyper::StatusCode::NOT_FOUND, 3) => {
+                    (hyper::StatusCode::NOT_FOUND, 3) => { // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::FILE,
                             error: None,
@@ -258,14 +258,14 @@ impl TildeBuster {
                         tx.send(res).unwrap();
                     },
                     _ => {
-                        warn!("Got invalid HTTP status code when bruteforcing the filename: {}", res.status());
+                        warn!("Got invalid HTTP status code when bruteforcing the extension: {}", res.status());
                     }
                 }
 
                 Ok(())
             })
             .or_else(|e| {
-                warn!("Got HTTP error when bruteforcing the filename: {}", e);
+                warn!("Got HTTP error when bruteforcing the extension: {}", e);
                 Ok(())
             })
     }
@@ -343,7 +343,7 @@ impl TildeBuster {
             .request(hyper_request)
             .and_then(move |res| {
                 match res.status() {
-                    hyper::StatusCode::NOT_FOUND => {
+                    hyper::StatusCode::NOT_FOUND => { // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::DIRECTORY,
                             error: None,
@@ -360,14 +360,14 @@ impl TildeBuster {
                         tx.send(res).unwrap();
                     },
                     _ => {
-                        warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
+                        warn!("Got invalid HTTP status code when checking if directory: {}", res.status());
                     },
                 }
 
                 Ok(())
             })
             .or_else(|e| {
-                warn!("Got HTTP error when bruteforcing the filename: {}", e);
+                warn!("Got HTTP error when checking if directory: {}", e);
                 Ok(())
             })
     }
@@ -407,7 +407,9 @@ impl TildeBuster {
 
     pub fn check_if_vulnerable(&self, client: &Client<HttpsConnector<HttpConnector>>, version: IISVersion) -> impl Future<Item = bool, Error = hyper::Error> {
         let magic_suffix = "*~1*/.aspx";
+        let not_existing_suffix = "AAAABB~1*/.aspx";
         let vuln_url = format!("{}{}", self.url, magic_suffix);
+        let not_existing_url = format!("{}{}", self.url, not_existing_suffix);
         let hyper_request = Request::builder()
             .header("User-Agent", &self.user_agent[..])
             .method(&self.http_method[..])
@@ -415,7 +417,14 @@ impl TildeBuster {
             .body(Body::from(self.http_body.clone()))
             .expect("Request builder");
 
-        client
+        let not_existing_hyper_request = Request::builder()
+            .header("User-Agent", &self.user_agent[..])
+            .method(&self.http_method[..])
+            .uri(not_existing_url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(self.http_body.clone()))
+            .expect("Request builder");
+
+        let fut1 = client
             .request(hyper_request)
             .and_then(|res| {
                 match res.status() {
@@ -425,6 +434,28 @@ impl TildeBuster {
                         warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
                         Ok(false)
                     }
+                }
+            });
+
+        let fut2 = client
+            .request(not_existing_hyper_request)
+            .and_then(|res| {
+                match res.status() {
+                    hyper::StatusCode::NOT_FOUND => Ok(true),
+                    hyper::StatusCode::BAD_REQUEST => Ok(false),
+                    _ => {
+                        warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
+                        Ok(false)
+                    }
+                }
+            });
+
+        fut1
+            .join(fut2)
+            .and_then(|res| {
+                match res {
+                    (true, false) => Ok(true),
+                    _ => Ok(false),
                 }
             })
     }
