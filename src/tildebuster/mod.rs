@@ -13,7 +13,7 @@ use std::thread;
 
 pub mod result_processor;
 
-use result_processor::{TildeScanProcessor, SingleTildeScanResult, FSObject, TildeRequest};
+use result_processor::{FSObject, SingleTildeScanResult, TildeRequest, TildeScanProcessor};
 
 use std::{fs, time::SystemTime};
 
@@ -65,7 +65,10 @@ impl TildeBuster {
         let client = Client::builder().build(https_connector);
         let n_threads = self.n_threads;
         let mut current_numbers_of_request = 0;
-        let chars = "abcdefghijklmnopqrstuvwxyz1234567890-_".split("").map(|c| c.to_owned()).collect::<Vec<String>>();
+        let chars = "abcdefghijklmnopqrstuvwxyz1234567890-_"
+            .split("")
+            .map(|c| c.to_owned())
+            .collect::<Vec<String>>();
         let total_numbers_of_request = chars.len();
         let start_time = SystemTime::now();
         let mut result_processor = TildeScanProcessor::new();
@@ -85,7 +88,8 @@ impl TildeBuster {
             .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
             .progress_chars("#>-"));
 
-        let fut = self.check_iis_version(&client)
+        let fut = self
+            .check_iis_version(&client)
             .and_then(move |version| {
                 futures::future::ok(version.clone())
                     .join(self.check_if_vulnerable(&client, version))
@@ -95,7 +99,9 @@ impl TildeBuster {
 
                         if !is_vulnerable {
                             error!("The target doesn't seem to be vulnerable");
-                            warn!("Try setting HTTP method to OPTIONS or add an extension like aspx");
+                            warn!(
+                                "Try setting HTTP method to OPTIONS or add an extension like aspx"
+                            );
                             Ok(())
                         } else {
                             let stream = futures::stream::iter_ok(chars)
@@ -110,7 +116,11 @@ impl TildeBuster {
                                         extension: "".to_owned(),
                                     };
 
-                                    TildeBuster::_brute_filename(tx.clone(), client.clone(), request)
+                                    TildeBuster::_brute_filename(
+                                        tx.clone(),
+                                        client.clone(),
+                                        request,
+                                    )
                                 })
                                 .buffer_unordered(n_threads)
                                 .for_each(Ok)
@@ -121,10 +131,13 @@ impl TildeBuster {
                             loop {
                                 current_numbers_of_request = current_numbers_of_request + 1;
                                 bar.inc(1);
-                                let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
+                                let seconds_from_start =
+                                    start_time.elapsed().unwrap().as_millis() / 1000;
                                 if seconds_from_start != 0 {
                                     bar.set_message(
-                                        &(current_numbers_of_request as u64 / seconds_from_start as u64).to_string(),
+                                        &(current_numbers_of_request as u64
+                                            / seconds_from_start as u64)
+                                            .to_string(),
                                     );
                                 } else {
                                     bar.set_message("warming up...")
@@ -141,65 +154,74 @@ impl TildeBuster {
                                 match &msg.error {
                                     Some(e) => {
                                         error!("{:?}", e);
-                                        if current_numbers_of_request == 1 || exit_on_connection_errors {
+                                        if current_numbers_of_request == 1
+                                            || exit_on_connection_errors
+                                        {
                                             warn!("Check connectivity to the target");
                                             break;
                                         }
                                     }
-                                    None => {
-                                        match msg.kind {
-                                            FSObject::NOT_EXISTING => {
-                                                trace!("{:?}", msg);
-                                            },
-                                            FSObject::FILE => {
-                                                if no_progress_bar {
-                                                    println!(
-                                                        "File\t{}.{}",
-                                                        msg.request.filename,
-                                                        msg.request.extension,
-                                                    );
-                                                } else {
-                                                    bar.println(format!(
-                                                        "File\t{}.{}",
-                                                        msg.request.filename,
-                                                        msg.request.extension,
-                                                    ));
-                                                }
+                                    None => match msg.kind {
+                                        FSObject::NOT_EXISTING => {
+                                            trace!("{:?}", msg);
+                                        }
+                                        FSObject::FILE => {
+                                            if no_progress_bar {
+                                                println!(
+                                                    "File\t{}.{}",
+                                                    msg.request.filename, msg.request.extension,
+                                                );
+                                            } else {
+                                                bar.println(format!(
+                                                    "File\t{}.{}",
+                                                    msg.request.filename, msg.request.extension,
+                                                ));
+                                            }
 
-                                                result_processor.maybe_add_result(msg);
-                                            },
-                                            FSObject::DIRECTORY => {
-                                                if no_progress_bar {
-                                                    println!(
-                                                        "Directory\t{}",
-                                                        msg.request.filename,
-                                                    );
-                                                } else {
-                                                    bar.println(format!(
-                                                        "Directory\t{}",
-                                                        msg.request.filename,
-                                                    ));
-                                                }
+                                            result_processor.maybe_add_result(msg);
+                                        }
+                                        FSObject::DIRECTORY => {
+                                            if no_progress_bar {
+                                                println!("Directory\t{}", msg.request.filename,);
+                                            } else {
+                                                bar.println(format!(
+                                                    "Directory\t{}",
+                                                    msg.request.filename,
+                                                ));
+                                            }
 
-                                                result_processor.maybe_add_result(msg);
-                                            },
-                                            FSObject::BRUTE_EXTENSION => {
-                                                for c in chars1.iter() {
-                                                    let mut request = msg.request.clone();
-                                                    request.extension = format!("{}{}", request.extension, c);
-                                                    rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), request));
-                                                }
-                                            },
-                                            FSObject::BRUTE_FILENAME => {
-                                                for c in chars1.iter() {
-                                                    let mut request = msg.request.clone();
-                                                    request.filename = format!("{}{}", request.filename, c);
-                                                    rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
-                                                }
-                                            },
-                                            FSObject::CHECK_IF_DIRECTORY => {
-                                                rt::spawn(TildeBuster::_check_if_directory(tx1.clone(), client1.clone(), msg.request));
-                                            },
+                                            result_processor.maybe_add_result(msg);
+                                        }
+                                        FSObject::BRUTE_EXTENSION => {
+                                            for c in chars1.iter() {
+                                                let mut request = msg.request.clone();
+                                                request.extension =
+                                                    format!("{}{}", request.extension, c);
+                                                rt::spawn(TildeBuster::_brute_extension(
+                                                    tx1.clone(),
+                                                    client1.clone(),
+                                                    request,
+                                                ));
+                                            }
+                                        }
+                                        FSObject::BRUTE_FILENAME => {
+                                            for c in chars1.iter() {
+                                                let mut request = msg.request.clone();
+                                                request.filename =
+                                                    format!("{}{}", request.filename, c);
+                                                rt::spawn(TildeBuster::_brute_filename(
+                                                    tx1.clone(),
+                                                    client1.clone(),
+                                                    request,
+                                                ));
+                                            }
+                                        }
+                                        FSObject::CHECK_IF_DIRECTORY => {
+                                            rt::spawn(TildeBuster::_check_if_directory(
+                                                tx1.clone(),
+                                                client1.clone(),
+                                                msg.request,
+                                            ));
                                         }
                                     },
                                 }
@@ -212,8 +234,8 @@ impl TildeBuster {
                                 result_processor.save_tilde_results(&output);
                             }
                             Ok(())
-                    }
-                })
+                        }
+                    })
             })
             .or_else(|e| {
                 error!("{}", e);
@@ -228,7 +250,12 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        let vuln_url = format!("{}~1.{}{}", request.url, request.extension, "%3f".repeat(3 - request.extension.len()));
+        let vuln_url = format!(
+            "{}~1.{}{}",
+            request.url,
+            request.extension,
+            "%3f".repeat(3 - request.extension.len())
+        );
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
             .method(&request.http_method[..])
@@ -240,14 +267,15 @@ impl TildeBuster {
             .request(hyper_request)
             .and_then(move |res| {
                 match (res.status(), request.extension.len()) {
-                    (hyper::StatusCode::NOT_FOUND, 3) => { // TODO: look for duplicates
+                    (hyper::StatusCode::NOT_FOUND, 3) => {
+                        // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::FILE,
                             error: None,
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::BRUTE_EXTENSION,
@@ -255,7 +283,7 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     (hyper::StatusCode::BAD_REQUEST, _) => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::NOT_EXISTING,
@@ -263,9 +291,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     _ => {
-                        warn!("Got invalid HTTP status code when bruteforcing the extension: {}", res.status());
+                        warn!(
+                            "Got invalid HTTP status code when bruteforcing the extension: {}",
+                            res.status()
+                        );
                     }
                 }
 
@@ -302,7 +333,7 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::BRUTE_FILENAME,
@@ -310,7 +341,7 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     (hyper::StatusCode::BAD_REQUEST, _) => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::NOT_EXISTING,
@@ -318,9 +349,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     _ => {
-                        warn!("Got invalid HTTP status code when bruteforcing the filename: {}", res.status());
+                        warn!(
+                            "Got invalid HTTP status code when bruteforcing the filename: {}",
+                            res.status()
+                        );
                     }
                 }
 
@@ -350,14 +384,15 @@ impl TildeBuster {
             .request(hyper_request)
             .and_then(move |res| {
                 match res.status() {
-                    hyper::StatusCode::NOT_FOUND => { // TODO: look for duplicates
+                    hyper::StatusCode::NOT_FOUND => {
+                        // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::DIRECTORY,
                             error: None,
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     hyper::StatusCode::BAD_REQUEST => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::BRUTE_EXTENSION,
@@ -365,10 +400,13 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    },
+                    }
                     _ => {
-                        warn!("Got invalid HTTP status code when checking if directory: {}", res.status());
-                    },
+                        warn!(
+                            "Got invalid HTTP status code when checking if directory: {}",
+                            res.status()
+                        );
+                    }
                 }
 
                 Ok(())
@@ -379,7 +417,10 @@ impl TildeBuster {
             })
     }
 
-    pub fn check_iis_version(&self, client: &Client<HttpsConnector<HttpConnector>>) -> impl Future<Item = IISVersion, Error = hyper::Error> {
+    pub fn check_iis_version(
+        &self,
+        client: &Client<HttpsConnector<HttpConnector>>,
+    ) -> impl Future<Item = IISVersion, Error = hyper::Error> {
         let hyper_request = Request::builder()
             .header("User-Agent", &self.user_agent[..])
             .method(&self.http_method[..])
@@ -387,12 +428,10 @@ impl TildeBuster {
             .body(Body::from(self.http_body.clone()))
             .expect("Request builder");
 
-        client
-            .request(hyper_request)
-            .and_then(move |res| {
-                let version = res.headers().get("Server").unwrap().to_str().unwrap();
-                Ok(TildeBuster::map_iis_version(version))
-            })
+        client.request(hyper_request).and_then(move |res| {
+            let version = res.headers().get("Server").unwrap().to_str().unwrap();
+            Ok(TildeBuster::map_iis_version(version))
+        })
     }
 
     pub fn map_iis_version(header: &str) -> IISVersion {
@@ -412,7 +451,11 @@ impl TildeBuster {
         }
     }
 
-    pub fn check_if_vulnerable(&self, client: &Client<HttpsConnector<HttpConnector>>, version: IISVersion) -> impl Future<Item = bool, Error = hyper::Error> {
+    pub fn check_if_vulnerable(
+        &self,
+        client: &Client<HttpsConnector<HttpConnector>>,
+        version: IISVersion,
+    ) -> impl Future<Item = bool, Error = hyper::Error> {
         let magic_suffix = "*~1*/.aspx";
         let not_existing_suffix = "AAAABB~1*/.aspx";
         let vuln_url = format!("{}{}", self.url, magic_suffix);
@@ -433,37 +476,35 @@ impl TildeBuster {
 
         let fut1 = client
             .request(hyper_request)
-            .and_then(|res| {
-                match res.status() {
-                    hyper::StatusCode::NOT_FOUND => Ok(true),
-                    hyper::StatusCode::BAD_REQUEST => Ok(false),
-                    _ => {
-                        warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
-                        Ok(false)
-                    }
+            .and_then(|res| match res.status() {
+                hyper::StatusCode::NOT_FOUND => Ok(true),
+                hyper::StatusCode::BAD_REQUEST => Ok(false),
+                _ => {
+                    warn!(
+                        "Got invalid HTTP status code when checking if vulnerable: {}",
+                        res.status()
+                    );
+                    Ok(false)
                 }
             });
 
         let fut2 = client
             .request(not_existing_hyper_request)
-            .and_then(|res| {
-                match res.status() {
-                    hyper::StatusCode::NOT_FOUND => Ok(true),
-                    hyper::StatusCode::BAD_REQUEST => Ok(false),
-                    _ => {
-                        warn!("Got invalid HTTP status code when checking if vulnerable: {}", res.status());
-                        Ok(false)
-                    }
+            .and_then(|res| match res.status() {
+                hyper::StatusCode::NOT_FOUND => Ok(true),
+                hyper::StatusCode::BAD_REQUEST => Ok(false),
+                _ => {
+                    warn!(
+                        "Got invalid HTTP status code when checking if vulnerable: {}",
+                        res.status()
+                    );
+                    Ok(false)
                 }
             });
 
-        fut1
-            .join(fut2)
-            .and_then(|res| {
-                match res {
-                    (true, false) => Ok(true),
-                    _ => Ok(false),
-                }
-            })
+        fut1.join(fut2).and_then(|res| match res {
+            (true, false) => Ok(true),
+            _ => Ok(false),
+        })
     }
 }

@@ -12,8 +12,8 @@ mod banner;
 mod dirbuster;
 mod dnsbuster;
 mod fuzzbuster;
-mod vhostbuster;
 mod tildebuster;
+mod vhostbuster;
 
 use args::*;
 use dirbuster::{
