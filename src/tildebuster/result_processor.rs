@@ -3,10 +3,11 @@ use std::{fs::File, io::Write, path::Path, str};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FSObject {
-    File,
-    Directory,
-    Existing,
-    NotExisting,
+    FILE,
+    DIRECTORY,
+    EXISTING_DIRECTORY,
+    EXISTING_FILE,
+    NOT_EXISTING,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -22,8 +23,6 @@ pub struct TildeRequest {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SingleTildeScanResult {
-    pub filename: String,
-    pub extension: String,
     pub kind: FSObject,
     pub error: Option<String>,
     pub request: TildeRequest,

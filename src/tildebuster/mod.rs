@@ -151,46 +151,53 @@ impl TildeBuster {
                 }
                 None => {
                     match msg.kind {
-                        FSObject::File => {
-                            if no_progress_bar {
-                                println!(
-                                    "File\t{}.{}",
-                                    msg.filename,
-                                    msg.extension,
-                                );
-                            } else {
-                                bar.println(format!(
-                                    "File\t{}.{}",
-                                    msg.filename,
-                                    msg.extension,
-                                ));
-                            }
-                        },
-                        FSObject::Directory => {
-                            if no_progress_bar {
-                                println!(
-                                    "Directory\t{}",
-                                    msg.filename,
-                                );
-                            } else {
-                                bar.println(format!(
-                                    "Directory\t{}",
-                                    msg.filename,
-                                ));
-                            }
-                        },
-                        FSObject::Existing => {
-                            if msg.filename.len() < 6 {
-                                for c in chars1.iter() {
-                                    let mut request = msg.request.clone();
-                                    request.filename = format!("{}{}", msg.filename, c);
-                                    rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
+                        FSObject::FILE => {
+                                if msg.request.extension.len() < 3 {
+   
+                                } else {
+                                    if no_progress_bar {
+                                        println!(
+                                            "File\t{}.{}",
+                                            msg.request.filename,
+                                            msg.request.extension,
+                                        );
+                                    } else {
+                                        bar.println(format!(
+                                            "File\t{}.{}",
+                                            msg.request.filename,
+                                            msg.request.extension,
+                                        ));
+                                    }
                                 }
+                        },
+                        FSObject::DIRECTORY => {
+                            if no_progress_bar {
+                                println!(
+                                    "Directory\t{}",
+                                    msg.request.filename,
+                                );
                             } else {
-                                rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), msg.request.clone()));
+                                bar.println(format!(
+                                    "Directory\t{}",
+                                    msg.request.filename,
+                                ));
                             }
                         },
-                        FSObject::NotExisting => {
+                        FSObject::EXISTING_FILE => {
+                            for c in chars1.iter() {
+                                let mut request = msg.request.clone();
+                                request.extension = format!("{}{}", msg.request.extension, c);
+                                rt::spawn(TildeBuster::_brute_extension(tx1.clone(), client1.clone(), request));
+                            }
+                        }
+                        FSObject::EXISTING_DIRECTORY => {
+                            for c in chars1.iter() {
+                                let mut request = msg.request.clone();
+                                request.filename = format!("{}{}", msg.request.filename, c);
+                                rt::spawn(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request));
+                            }
+                        },
+                        FSObject::NOT_EXISTING => {
                             trace!("{:?}", msg);
                         },
                     }
@@ -206,44 +213,139 @@ impl TildeBuster {
         }
     }
 
-    fn _brute_filename(
-        tx: Sender<SingleTildeScanResult>,
-        client: Client<HttpsConnector<HttpConnector>>,
-        request: TildeRequest,
-    ) -> impl Future<Item = (), Error = ()> {
-        futures::future::ok(())
-    }
-
-    fn _filename_exists(
-        tx: Sender<SingleTildeScanResult>,
-        client: Client<HttpsConnector<HttpConnector>>,
-        request: TildeRequest,
-    ) -> impl Future<Item = bool, Error = hyper::Error> {
-        futures::future::ok(true)
-    }
-
-    fn _extension_exists(
-        tx: Sender<SingleTildeScanResult>,
-        client: Client<HttpsConnector<HttpConnector>>,
-        request: TildeRequest,
-    ) -> impl Future<Item = bool, Error = hyper::Error> {
-        futures::future::ok(true)
-    }
-
-    fn _has_extension(
-        tx: Sender<SingleTildeScanResult>,
-        client: Client<HttpsConnector<HttpConnector>>,
-        request: TildeRequest,
-    ) -> impl Future<Item = bool, Error = hyper::Error> {
-        futures::future::ok(true)
-    }
-
     fn _brute_extension(
         tx: Sender<SingleTildeScanResult>,
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        futures::future::ok(())
+        let mut request = request;
+        request.url = format!("{}~1.{}{}", request.url, request.extension, "%3f".repeat(3 - request.extension.len()));
+        let hyper_request = Request::builder()
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(&request.url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
+            .expect("Request builder");
+
+        client
+            .request(hyper_request)
+            .and_then(move |res| {
+                match (res.status(), request.extension.len()) {
+                    (hyper::StatusCode::NOT_FOUND, 3) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::FILE,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    (hyper::StatusCode::NOT_FOUND, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::EXISTING_FILE,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::NOT_EXISTING,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    _ => {
+                        warn!("Got invalid HTTP status code when bruteforcing the filename: {}", res.status());
+                    }
+                }
+
+                Ok(())
+            })
+            .or_else(|e| {
+                warn!("Got HTTP error when bruteforcing the filename: {}", e);
+                Ok(())
+            })
+    }
+
+    fn _brute_filename(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = (), Error = ()> {
+        let magic_suffix = "*~1*/.aspx";
+        let mut request = request;
+        request.url = format!("{}{}", request.url, magic_suffix); // TODO: do not append every time
+        let hyper_request = Request::builder()
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(&request.url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
+            .expect("Request builder");
+
+        client
+            .request(hyper_request)
+            .and_then(move |res| {
+                match (res.status(), request.url.len()) {
+                    (hyper::StatusCode::NOT_FOUND, 6) => {
+                        rt::spawn(TildeBuster::_check_if_directory(tx.clone(), client.clone(), request.clone())
+                            .and_then(move |is_directory| {
+                                match is_directory {
+                                    true => {
+                                        let res = SingleTildeScanResult {
+                                            kind: FSObject::DIRECTORY,
+                                            error: None,
+                                            request: request,
+                                        };
+                                        tx.send(res).unwrap();
+                                    },
+                                    false => {
+                                        let res = SingleTildeScanResult {
+                                            kind: FSObject::EXISTING_FILE,
+                                            error: None,
+                                            request: request,
+                                        };
+                                        tx.send(res).unwrap();
+                                    },
+                                }
+                                Ok(())
+                            }));
+                    },
+                    (hyper::StatusCode::NOT_FOUND, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::EXISTING_DIRECTORY,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::NOT_EXISTING,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    },
+                    _ => {
+                        warn!("Got invalid HTTP status code when bruteforcing the filename: {}", res.status());
+                    }
+                }
+
+                Ok(())
+            })
+            .or_else(|e| {
+                warn!("Got HTTP error when bruteforcing the filename: {}", e);
+                Ok(())
+            })
+    }
+
+    fn _check_if_directory(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = bool, Error = ()> {
+        futures::future::ok(true) // TODO: implement check directory
     }
 
     pub fn check_iis_version(&self, client: &Client<HttpsConnector<HttpConnector>>) -> impl Future<Item = IISVersion, Error = hyper::Error> {
