@@ -33,6 +33,7 @@ pub struct TildeBuster {
     pub no_progress_bar: bool,
     pub exit_on_connection_errors: bool,
     pub output: String,
+    pub extension: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -114,6 +115,7 @@ impl TildeBuster {
                                         user_agent: self.user_agent.clone(),
                                         filename: c,
                                         extension: "".to_owned(),
+                                        redirect_extension: self.extension.clone(),
                                     };
 
                                     TildeBuster::_brute_filename(
@@ -313,7 +315,10 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        let magic_suffix = "*~1*/.aspx";
+        let magic_suffix = match &request.redirect_extension {
+            Some(v) => format!("*~1*/.{}", v),
+            None => "*~1*".to_owned(),
+        };
         let vuln_url = format!("{}{}", request.url, magic_suffix);
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
@@ -371,7 +376,10 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
-        let magic_suffix = "~1/.aspx";
+        let magic_suffix = match &request.redirect_extension {
+            Some(v) => format!("*~1*/.{}", v),
+            None => "*~1*".to_owned(),
+        };
         let vuln_url = format!("{}{}", request.url, magic_suffix);
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
@@ -456,8 +464,14 @@ impl TildeBuster {
         client: &Client<HttpsConnector<HttpConnector>>,
         version: IISVersion,
     ) -> impl Future<Item = bool, Error = hyper::Error> {
-        let magic_suffix = "*~1*/.aspx";
-        let not_existing_suffix = "AAAABB~1*/.aspx";
+        let magic_suffix = match &self.extension {
+            Some(v) => format!("*~1*/.{}", v),
+            None => "*~1*".to_owned(),
+        };
+        let not_existing_suffix = match &self.extension {
+            Some(v) => format!("AAAABB~1/.{}", v),
+            None => "AAAABB~1".to_owned(),
+        };
         let vuln_url = format!("{}{}", self.url, magic_suffix);
         let not_existing_url = format!("{}{}", self.url, not_existing_suffix);
         let hyper_request = Request::builder()

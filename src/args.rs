@@ -35,6 +35,10 @@ pub struct DirArgs {
     pub extensions: Vec<String>,
 }
 
+pub struct TildeArgs {
+    pub extension: Option<String>,
+}
+
 pub struct FuzzArgs {
     pub csrf_url: Option<String>,
     pub csrf_regex: Option<String>,
@@ -195,6 +199,16 @@ pub fn set_dir_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("append-slash")
             .help("Tries to also append / to the base request")
             .short("f"),
+    )
+}
+
+pub fn set_tilde_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("extension")
+            .long("extension")
+            .help("Sets the redirect extension")
+            .short("e")
+            .takes_value(true)
     )
 }
 
@@ -445,5 +459,16 @@ pub fn url_is_valid(url: &str) -> bool {
                 return false;
             }
         },
+    }
+}
+
+pub fn extract_tilde_args<'a>(submatches: &clap::ArgMatches<'a>) -> TildeArgs {
+    let extension = match submatches.value_of("extension") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+
+    TildeArgs {
+        extension,
     }
 }

@@ -19,6 +19,7 @@ pub struct TildeRequest {
     pub http_body: String,
     pub user_agent: String,
     pub filename: String,
+    pub redirect_extension: Option<String>,
     pub extension: String,
 }
 

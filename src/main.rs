@@ -26,12 +26,14 @@ use dnsbuster::{
     utils::*,
     DnsConfig,
 };
-use fuzzbuster::FuzzBuster;
+use tildebuster::TildeBuster;
 use vhostbuster::{
     result_processor::{SingleVhostScanResult, VhostScanResult},
     utils::*,
     VhostConfig,
 };
+
+use fuzzbuster::FuzzBuster;
 
 fn main() {
     if std::env::vars()
@@ -78,6 +80,10 @@ fn main() {
             .about("Virtual hosts enumeration mode")
             .after_help("EXAMPLE:
     rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\""))
+        .subcommand(set_tilde_args(set_http_args(set_common_args(SubCommand::with_name("tilde"))))
+            .about("IIS 8.3 shortname enumeration mode")
+            .after_help("EXAMPLE:
+    rustbuster tilde -u http://localhost:3000/ -e aspx"))
         .subcommand(set_fuzz_args(set_body_args(set_http_args(set_common_args(SubCommand::with_name("fuzz")))))
             .about("Custom fuzzing enumeration mode")
             .after_help("EXAMPLE:
@@ -476,6 +482,31 @@ fn main() {
                 csrf_url: fuzz_args.csrf_url,
                 csrf_regex: fuzz_args.csrf_regex,
                 csrf_headers: fuzz_args.csrf_headers,
+            };
+
+            debug!("FuzzBuster {:#?}", fuzzbuster);
+
+            fuzzbuster.run();
+        }
+        "tilde" => {
+            let http_args = extract_http_args(submatches);
+            if !url_is_valid(&http_args.url) {
+                return;
+            }
+
+            let tilde_args = extract_tilde_args(submatches);
+            let fuzzbuster = TildeBuster {
+                n_threads: common_args.n_threads,
+                ignore_certificate: http_args.ignore_certificate,
+                http_method: http_args.http_method.to_owned(),
+                http_body: http_args.http_body.to_owned(),
+                user_agent: http_args.user_agent.to_owned(),
+                http_headers: http_args.http_headers,
+                url: http_args.url.to_owned(),
+                no_progress_bar: common_args.no_progress_bar,
+                exit_on_connection_errors: common_args.exit_on_connection_errors,
+                output: common_args.output.to_owned(),
+                extension: tilde_args.extension,
             };
 
             debug!("FuzzBuster {:#?}", fuzzbuster);
