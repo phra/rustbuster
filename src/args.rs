@@ -214,7 +214,7 @@ pub fn set_tilde_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("extension")
             .help("Sets the redirect extension")
             .short("e")
-            .takes_value(true)
+            .takes_value(true),
     )
 }
 
@@ -468,9 +468,7 @@ pub fn extract_tilde_args<'a>(submatches: &clap::ArgMatches<'a>) -> TildeArgs {
         None => None,
     };
 
-    TildeArgs {
-        extension,
-    }
+    TildeArgs { extension }
 }
 
 pub fn extract_wordlist_args<'a>(submatches: &clap::ArgMatches<'a>) -> Result<WordlistArgs, ()> {
@@ -479,7 +477,7 @@ pub fn extract_wordlist_args<'a>(submatches: &clap::ArgMatches<'a>) -> Result<Wo
         .unwrap()
         .map(|w| w.to_owned())
         .collect::<Vec<String>>();
-    
+
     let all_wordlists_exist = wordlist_paths
         .iter()
         .map(|wordlist_path| {
@@ -496,9 +494,5 @@ pub fn extract_wordlist_args<'a>(submatches: &clap::ArgMatches<'a>) -> Result<Wo
         return Err(());
     }
 
-    Ok(
-        WordlistArgs {
-            wordlist_paths,
-        }
-    )
+    Ok(WordlistArgs { wordlist_paths })
 }
