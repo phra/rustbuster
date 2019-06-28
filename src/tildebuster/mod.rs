@@ -70,6 +70,10 @@ impl TildeBuster {
             .split("")
             .map(|c| c.to_owned())
             .collect::<Vec<String>>();
+        let chars_duplicate = "234567890"
+            .split("")
+            .map(|c| c.to_owned())
+            .collect::<Vec<String>>();
         let total_numbers_of_request = chars.len();
         let start_time = SystemTime::now();
         let mut result_processor = TildeScanProcessor::new();
@@ -116,6 +120,7 @@ impl TildeBuster {
                                         filename: c,
                                         extension: "".to_owned(),
                                         redirect_extension: self.extension.clone(),
+                                        duplicate_index: "1".to_owned(),
                                     };
 
                                     TildeBuster::_brute_filename(
@@ -167,16 +172,60 @@ impl TildeBuster {
                                         FSObject::NOT_EXISTING => {
                                             trace!("{:?}", msg);
                                         }
-                                        FSObject::FILE => {
+                                        FSObject::DUPLICATE_FILE => {
                                             if no_progress_bar {
                                                 println!(
-                                                    "File\t{}.{}",
-                                                    msg.request.filename, msg.request.extension,
+                                                    "File\t{}~{}.{}",
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
+                                                    msg.request.extension,
                                                 );
                                             } else {
                                                 bar.println(format!(
-                                                    "File\t{}.{}",
-                                                    msg.request.filename, msg.request.extension,
+                                                    "File\t{}~{}.{}",
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
+                                                    msg.request.extension,
+                                                ));
+                                            }
+
+                                            result_processor.maybe_add_result(msg);
+                                        }
+                                        FSObject::DUPLICATE_DIRECTORY => {
+                                            if no_progress_bar {
+                                                println!(
+                                                    "Directory\t{}~{}",
+                                                    msg.request.filename, msg.request.duplicate_index,
+                                                );
+                                            } else {
+                                                bar.println(format!(
+                                                    "Directory\t{}~{}",
+                                                    msg.request.filename, msg.request.duplicate_index,
+                                                ));
+                                            }
+
+                                            result_processor.maybe_add_result(msg);
+                                        }
+                                        FSObject::FILE => {
+                                            if no_progress_bar {
+                                                println!(
+                                                    "File\t{}~{}.{}",
+                                                    msg.request.filename, msg.request.duplicate_index, msg.request.extension,
+                                                );
+                                            } else {
+                                                bar.println(format!(
+                                                    "File\t{}~{}.{}",
+                                                    msg.request.filename, msg.request.duplicate_index, msg.request.extension,
+                                                ));
+                                            }
+
+                                            for c in chars_duplicate.iter() {
+                                                let mut request = msg.request.clone();
+                                                request.duplicate_index = c.clone();
+                                                rt::spawn(TildeBuster::_brute_duplicate(
+                                                    tx1.clone(),
+                                                    client1.clone(),
+                                                    msg.request.clone(),
                                                 ));
                                             }
 
@@ -189,6 +238,16 @@ impl TildeBuster {
                                                 bar.println(format!(
                                                     "Directory\t{}",
                                                     msg.request.filename,
+                                                ));
+                                            }
+
+                                            for c in chars_duplicate.iter() {
+                                                let mut request = msg.request.clone();
+                                                request.duplicate_index = c.clone();
+                                                rt::spawn(TildeBuster::_brute_duplicate(
+                                                    tx1.clone(),
+                                                    client1.clone(),
+                                                    msg.request.clone(),
                                                 ));
                                             }
 
@@ -252,11 +311,17 @@ impl TildeBuster {
         client: Client<HttpsConnector<HttpConnector>>,
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
+        let magic_suffix = match &request.redirect_extension {
+            Some(v) => format!("/.{}", v),
+            None => "".to_owned(),
+        };
+
         let vuln_url = format!(
-            "{}~1.{}{}",
+            "{}~1.{}{}{}",
             request.url,
             request.extension,
-            "%3f".repeat(3 - request.extension.len())
+            "%3f".repeat(3 - request.extension.len()),
+            magic_suffix,
         );
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
@@ -270,7 +335,6 @@ impl TildeBuster {
             .and_then(move |res| {
                 match (res.status(), request.extension.len()) {
                     (hyper::StatusCode::NOT_FOUND, 3) => {
-                        // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::FILE,
                             error: None,
@@ -319,7 +383,15 @@ impl TildeBuster {
             Some(v) => format!("*~1*/.{}", v),
             None => "*~1*".to_owned(),
         };
+
+        let magic_suffix_short = match &request.redirect_extension {
+            Some(v) => format!("~1*/.{}", v),
+            None => "~1*".to_owned(),
+        };
+
         let vuln_url = format!("{}{}", request.url, magic_suffix);
+        let vuln_url_short = format!("{}{}", request.url, magic_suffix_short);
+
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
             .method(&request.http_method[..])
@@ -327,11 +399,20 @@ impl TildeBuster {
             .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
-        client
-            .request(hyper_request)
-            .and_then(move |res| {
-                match (res.status(), request.url.len()) {
-                    (hyper::StatusCode::NOT_FOUND, 6) => {
+        let hyper_request_short = Request::builder()
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(&vuln_url_short.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
+            .expect("Request builder");
+
+        let req = client.request(hyper_request);
+        let req_short = client.request(hyper_request_short);
+
+        req.join(req_short)
+            .and_then(move |(res, res_short)| {
+                match (res.status(), res_short.status()) {
+                    (_, hyper::StatusCode::NOT_FOUND) => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::CHECK_IF_DIRECTORY,
                             error: None,
@@ -377,8 +458,8 @@ impl TildeBuster {
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
         let magic_suffix = match &request.redirect_extension {
-            Some(v) => format!("*~1*/.{}", v),
-            None => "*~1*".to_owned(),
+            Some(v) => format!("*~1/.{}", v),
+            None => "*~1".to_owned(),
         };
         let vuln_url = format!("{}{}", request.url, magic_suffix);
         let hyper_request = Request::builder()
@@ -393,7 +474,6 @@ impl TildeBuster {
             .and_then(move |res| {
                 match res.status() {
                     hyper::StatusCode::NOT_FOUND => {
-                        // TODO: look for duplicates
                         let res = SingleTildeScanResult {
                             kind: FSObject::DIRECTORY,
                             error: None,
@@ -520,5 +600,88 @@ impl TildeBuster {
             (true, false) => Ok(true),
             _ => Ok(false),
         })
+    }
+
+    pub fn _brute_duplicate(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = (), Error = ()> {
+        let vuln_url = match (&request.extension.len(), &request.redirect_extension) {
+            (0, Some(v)) => format!(
+                "{}~{}/.{}",
+                request.url,
+                request.duplicate_index,
+                v,
+            ),
+            (0, None) => format!(
+                "{}~{}",
+                request.url,
+                request.duplicate_index,
+            ),
+            (_, Some(v)) => format!(
+                "{}~{}.{}/.{}",
+                request.url,
+                request.duplicate_index,
+                request.extension,
+                v,
+            ),
+            (_, None) => format!(
+                "{}~{}.{}",
+                request.url,
+                request.duplicate_index,
+                request.extension,
+            )
+        };
+
+        let hyper_request = Request::builder()
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(&vuln_url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
+            .expect("Request builder");
+
+        client
+            .request(hyper_request)
+            .and_then(move |res| {
+                match (res.status(), request.extension.len()) {
+                    (hyper::StatusCode::NOT_FOUND, 3) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::DUPLICATE_FILE,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    }
+                    (hyper::StatusCode::NOT_FOUND, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::DUPLICATE_DIRECTORY,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    }
+                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::NOT_EXISTING,
+                            error: None,
+                            request: request,
+                        };
+                        tx.send(res).unwrap();
+                    }
+                    _ => {
+                        warn!(
+                            "Got invalid HTTP status code when bruteforcing duplicates: {}",
+                            res.status()
+                        );
+                    }
+                }
+
+                Ok(())
+            })
+            .or_else(|e| {
+                warn!("Got HTTP error when bruteforcing duplicates: {}", e);
+                Ok(())
+            })
     }
 }

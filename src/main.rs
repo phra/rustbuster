@@ -498,7 +498,7 @@ fn main() {
             }
 
             let tilde_args = extract_tilde_args(submatches);
-            let fuzzbuster = TildeBuster {
+            let tildebuster = TildeBuster {
                 n_threads: common_args.n_threads,
                 ignore_certificate: http_args.ignore_certificate,
                 http_method: http_args.http_method.to_owned(),
@@ -512,9 +512,9 @@ fn main() {
                 extension: tilde_args.extension,
             };
 
-            debug!("FuzzBuster {:#?}", fuzzbuster);
+            debug!("TildeBuster {:#?}", tildebuster);
 
-            fuzzbuster.run();
+            tildebuster.run();
         }
         _ => (),
     }

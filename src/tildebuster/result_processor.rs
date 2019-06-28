@@ -5,6 +5,8 @@ use std::{fs::File, io::Write, path::Path, str};
 pub enum FSObject {
     FILE,
     DIRECTORY,
+    DUPLICATE_FILE,
+    DUPLICATE_DIRECTORY,
     BRUTE_FILENAME,
     BRUTE_EXTENSION,
     CHECK_IF_DIRECTORY,
@@ -21,6 +23,7 @@ pub struct TildeRequest {
     pub filename: String,
     pub redirect_extension: Option<String>,
     pub extension: String,
+    pub duplicate_index: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
