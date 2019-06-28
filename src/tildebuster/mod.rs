@@ -68,10 +68,12 @@ impl TildeBuster {
         let mut current_numbers_of_request = 0;
         let chars = "abcdefghijklmnopqrstuvwxyz1234567890-_"
             .split("")
+            .filter(|c| !c.is_empty())
             .map(|c| c.to_owned())
             .collect::<Vec<String>>();
         let chars_duplicate = "234567890"
             .split("")
+            .filter(|c| !c.is_empty())
             .map(|c| c.to_owned())
             .collect::<Vec<String>>();
         let total_numbers_of_request = chars.len();
@@ -99,8 +101,8 @@ impl TildeBuster {
                 futures::future::ok(version.clone())
                     .join(self.check_if_vulnerable(&client, version))
                     .and_then(move |(version, is_vulnerable)| {
-                        debug!("iis version: {:?}", version);
-                        debug!("is vulnerable: {:?}", is_vulnerable);
+                        info!("iis version: {:?}", version);
+                        info!("is vulnerable: {:?}", is_vulnerable);
 
                         if !is_vulnerable {
                             error!("The target doesn't seem to be vulnerable");
@@ -231,7 +233,7 @@ impl TildeBuster {
                                                 rt::spawn(TildeBuster::_brute_duplicate(
                                                     tx1.clone(),
                                                     client1.clone(),
-                                                    msg.request.clone(),
+                                                    request,
                                                 ));
                                             }
 
@@ -253,7 +255,7 @@ impl TildeBuster {
                                                 rt::spawn(TildeBuster::_brute_duplicate(
                                                     tx1.clone(),
                                                     client1.clone(),
-                                                    msg.request.clone(),
+                                                    request,
                                                 ));
                                             }
 
@@ -323,8 +325,9 @@ impl TildeBuster {
         };
 
         let vuln_url = format!(
-            "{}~1.{}{}{}",
+            "{}{}~1.{}{}{}",
             request.url,
+            request.filename,
             request.extension,
             "%3f".repeat(3 - request.extension.len()),
             magic_suffix,
@@ -395,8 +398,8 @@ impl TildeBuster {
             None => "~1*".to_owned(),
         };
 
-        let vuln_url = format!("{}{}", request.url, magic_suffix);
-        let vuln_url_short = format!("{}{}", request.url, magic_suffix_short);
+        let vuln_url = format!("{}{}{}", request.url, request.filename, magic_suffix);
+        let vuln_url_short = format!("{}{}{}", request.url, request.filename, magic_suffix_short);
 
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
@@ -523,25 +526,27 @@ impl TildeBuster {
             .expect("Request builder");
 
         client.request(hyper_request).and_then(move |res| {
-            let version = res.headers().get("Server").unwrap().to_str().unwrap();
-            Ok(TildeBuster::map_iis_version(version))
+            Ok(TildeBuster::map_iis_version(res.headers()))
         })
     }
 
-    pub fn map_iis_version(header: &str) -> IISVersion {
-        match header {
-            "Microsoft-IIS/1" => IISVersion::IIS1,
-            "Microsoft-IIS/2" => IISVersion::IIS2,
-            "Microsoft-IIS/3" => IISVersion::IIS3,
-            "Microsoft-IIS/4" => IISVersion::IIS4,
-            "Microsoft-IIS/5" => IISVersion::IIS5,
-            "Microsoft-IIS/6" => IISVersion::IIS6,
-            "Microsoft-IIS/7" => IISVersion::IIS7,
-            "Microsoft-IIS/7.5" => IISVersion::IIS75,
-            "Microsoft-IIS/8" => IISVersion::IIS8,
-            "Microsoft-IIS/8.5" => IISVersion::IIS85,
-            "Microsoft-IIS/10" => IISVersion::IIS10,
-            _ => IISVersion::Unknown,
+    pub fn map_iis_version(headers: &hyper::HeaderMap) -> IISVersion {
+        match headers.get("Server") {
+            None => IISVersion::Unknown,
+            Some(v) => match v.to_str().unwrap() {
+                "Microsoft-IIS/1" => IISVersion::IIS1,
+                "Microsoft-IIS/2" => IISVersion::IIS2,
+                "Microsoft-IIS/3" => IISVersion::IIS3,
+                "Microsoft-IIS/4" => IISVersion::IIS4,
+                "Microsoft-IIS/5" => IISVersion::IIS5,
+                "Microsoft-IIS/6" => IISVersion::IIS6,
+                "Microsoft-IIS/7" => IISVersion::IIS7,
+                "Microsoft-IIS/7.5" => IISVersion::IIS75,
+                "Microsoft-IIS/8" => IISVersion::IIS8,
+                "Microsoft-IIS/8.5" => IISVersion::IIS85,
+                "Microsoft-IIS/10" => IISVersion::IIS10,
+                _ => IISVersion::Unknown,
+            }
         }
     }
 
@@ -555,8 +560,8 @@ impl TildeBuster {
             None => "*~1*".to_owned(),
         };
         let not_existing_suffix = match &self.extension {
-            Some(v) => format!("AAAABB~1/.{}", v),
-            None => "AAAABB~1".to_owned(),
+            Some(v) => format!("AAAAB*~1/.{}", v),
+            None => "AAAAB*~1".to_owned(),
         };
         let vuln_url = format!("{}{}", self.url, magic_suffix);
         let not_existing_url = format!("{}{}", self.url, not_existing_suffix);
