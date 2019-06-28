@@ -184,7 +184,7 @@ impl TildeBuster {
                                         }
                                         FSObject::DIRECTORY => {
                                             if no_progress_bar {
-                                                println!("Directory\t{}", msg.request.filename,);
+                                                println!("Directory\t{}", msg.request.filename);
                                             } else {
                                                 bar.println(format!(
                                                     "Directory\t{}",
