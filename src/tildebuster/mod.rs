@@ -244,7 +244,7 @@ impl TildeBuster {
                 Ok(())
             });
 
-        let _ = thread::spawn(move || rt::run(fut));
+        let _ = thread::spawn(move || rt::run(fut)).join();
     }
 
     fn _brute_extension(
