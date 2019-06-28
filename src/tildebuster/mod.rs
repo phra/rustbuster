@@ -195,12 +195,14 @@ impl TildeBuster {
                                             if no_progress_bar {
                                                 println!(
                                                     "Directory\t{}~{}",
-                                                    msg.request.filename, msg.request.duplicate_index,
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
                                                 );
                                             } else {
                                                 bar.println(format!(
                                                     "Directory\t{}~{}",
-                                                    msg.request.filename, msg.request.duplicate_index,
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
                                                 ));
                                             }
 
@@ -210,12 +212,16 @@ impl TildeBuster {
                                             if no_progress_bar {
                                                 println!(
                                                     "File\t{}~{}.{}",
-                                                    msg.request.filename, msg.request.duplicate_index, msg.request.extension,
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
+                                                    msg.request.extension,
                                                 );
                                             } else {
                                                 bar.println(format!(
                                                     "File\t{}~{}.{}",
-                                                    msg.request.filename, msg.request.duplicate_index, msg.request.extension,
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index,
+                                                    msg.request.extension,
                                                 ));
                                             }
 
@@ -608,30 +614,16 @@ impl TildeBuster {
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
         let vuln_url = match (&request.extension.len(), &request.redirect_extension) {
-            (0, Some(v)) => format!(
-                "{}~{}/.{}",
-                request.url,
-                request.duplicate_index,
-                v,
-            ),
-            (0, None) => format!(
-                "{}~{}",
-                request.url,
-                request.duplicate_index,
-            ),
+            (0, Some(v)) => format!("{}~{}/.{}", request.url, request.duplicate_index, v,),
+            (0, None) => format!("{}~{}", request.url, request.duplicate_index,),
             (_, Some(v)) => format!(
                 "{}~{}.{}/.{}",
-                request.url,
-                request.duplicate_index,
-                request.extension,
-                v,
+                request.url, request.duplicate_index, request.extension, v,
             ),
             (_, None) => format!(
                 "{}~{}.{}",
-                request.url,
-                request.duplicate_index,
-                request.extension,
-            )
+                request.url, request.duplicate_index, request.extension,
+            ),
         };
 
         let hyper_request = Request::builder()
