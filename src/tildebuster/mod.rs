@@ -111,6 +111,7 @@ impl TildeBuster {
                             );
                             Ok(())
                         } else {
+                            let mut spanwed_futures = chars.len();
                             let stream = futures::stream::iter_ok(chars)
                                 .map(move |c| {
                                     let request = TildeRequest {
@@ -137,9 +138,11 @@ impl TildeBuster {
 
                             rt::spawn(stream);
 
-                            loop {
+                            while spanwed_futures > 0 {
+                                debug!("spawned_futures: {}", spanwed_futures);
                                 current_numbers_of_request = current_numbers_of_request + 1;
                                 bar.inc(1);
+                                spanwed_futures = spanwed_futures - 1;
                                 let seconds_from_start =
                                     start_time.elapsed().unwrap().as_millis() / 1000;
                                 if seconds_from_start != 0 {
@@ -177,14 +180,14 @@ impl TildeBuster {
                                         FSObject::DUPLICATE_FILE => {
                                             if no_progress_bar {
                                                 println!(
-                                                    "File\t{}~{}.{}",
+                                                    "File\t\t{}~{}.{}",
                                                     msg.request.filename,
                                                     msg.request.duplicate_index,
                                                     msg.request.extension,
                                                 );
                                             } else {
                                                 bar.println(format!(
-                                                    "File\t{}~{}.{}",
+                                                    "File\t\t{}~{}.{}",
                                                     msg.request.filename,
                                                     msg.request.duplicate_index,
                                                     msg.request.extension,
@@ -213,14 +216,14 @@ impl TildeBuster {
                                         FSObject::FILE => {
                                             if no_progress_bar {
                                                 println!(
-                                                    "File\t{}~{}.{}",
+                                                    "File\t\t{}~{}.{}",
                                                     msg.request.filename,
                                                     msg.request.duplicate_index,
                                                     msg.request.extension,
                                                 );
                                             } else {
                                                 bar.println(format!(
-                                                    "File\t{}~{}.{}",
+                                                    "File\t\t{}~{}.{}",
                                                     msg.request.filename,
                                                     msg.request.duplicate_index,
                                                     msg.request.extension,
@@ -235,17 +238,18 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ));
+                                                spanwed_futures = spanwed_futures + 1;
                                             }
 
                                             result_processor.maybe_add_result(msg);
                                         }
                                         FSObject::DIRECTORY => {
                                             if no_progress_bar {
-                                                println!("Directory\t{}", msg.request.filename);
+                                                println!("Directory\t{}~{}", msg.request.filename, msg.request.duplicate_index);
                                             } else {
                                                 bar.println(format!(
-                                                    "Directory\t{}",
-                                                    msg.request.filename,
+                                                    "Directory\t{}~{}",
+                                                    msg.request.filename, msg.request.duplicate_index
                                                 ));
                                             }
 
@@ -257,6 +261,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ));
+                                                spanwed_futures = spanwed_futures + 1;
                                             }
 
                                             result_processor.maybe_add_result(msg);
@@ -271,6 +276,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ));
+                                                spanwed_futures = spanwed_futures + 1;
                                             }
                                         }
                                         FSObject::BRUTE_FILENAME => {
@@ -283,6 +289,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ));
+                                                spanwed_futures = spanwed_futures + 1;
                                             }
                                         }
                                         FSObject::CHECK_IF_DIRECTORY => {
@@ -291,6 +298,7 @@ impl TildeBuster {
                                                 client1.clone(),
                                                 msg.request,
                                             ));
+                                            spanwed_futures = spanwed_futures + 1;
                                         }
                                     },
                                 }
@@ -311,7 +319,7 @@ impl TildeBuster {
                 Ok(())
             });
 
-        let _ = thread::spawn(move || rt::run(fut)).join();
+        rt::run(fut);
     }
 
     fn _brute_extension(
@@ -359,7 +367,7 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                    (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::NOT_EXISTING,
                             error: None,
@@ -367,12 +375,12 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    _ => {
-                        warn!(
-                            "Got invalid HTTP status code when bruteforcing the extension: {}",
-                            res.status()
-                        );
-                    }
+                    // _ => {
+                    //     warn!(
+                    //         "Got invalid HTTP status code when bruteforcing the extension: {}",
+                    //         res.status()
+                    //     );
+                    // }
                 }
 
                 Ok(())
@@ -437,7 +445,7 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                    (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::NOT_EXISTING,
                             error: None,
@@ -445,12 +453,12 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    _ => {
-                        warn!(
-                            "Got invalid HTTP status code when bruteforcing the filename: {}",
-                            res.status()
-                        );
-                    }
+                    // _ => {
+                    //     warn!(
+                    //         "Got invalid HTTP status code when bruteforcing the filename: {}",
+                    //         res.status()
+                    //     );
+                    // }
                 }
 
                 Ok(())
@@ -470,7 +478,7 @@ impl TildeBuster {
             Some(v) => format!("*~1/.{}", v),
             None => "*~1".to_owned(),
         };
-        let vuln_url = format!("{}{}", request.url, magic_suffix);
+        let vuln_url = format!("{}{}{}", request.url, request.filename, magic_suffix);
         let hyper_request = Request::builder()
             .header("User-Agent", &request.user_agent[..])
             .method(&request.http_method[..])
@@ -490,7 +498,7 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    hyper::StatusCode::BAD_REQUEST => {
+                    hyper::StatusCode::BAD_REQUEST | _ => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::BRUTE_EXTENSION,
                             error: None,
@@ -498,12 +506,12 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    _ => {
-                        warn!(
-                            "Got invalid HTTP status code when checking if directory: {}",
-                            res.status()
-                        );
-                    }
+                    // _ => {
+                    //     warn!(
+                    //         "Got invalid HTTP status code when checking if directory: {}",
+                    //         res.status()
+                    //     );
+                    // }
                 }
 
                 Ok(())
@@ -619,15 +627,15 @@ impl TildeBuster {
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
         let vuln_url = match (&request.extension.len(), &request.redirect_extension) {
-            (0, Some(v)) => format!("{}~{}/.{}", request.url, request.duplicate_index, v,),
-            (0, None) => format!("{}~{}", request.url, request.duplicate_index,),
+            (0, Some(v)) => format!("{}{}~{}/.{}", request.url, request.filename, request.duplicate_index, v,),
+            (0, None) => format!("{}{}~{}", request.url, request.filename, request.duplicate_index,),
             (_, Some(v)) => format!(
-                "{}~{}.{}/.{}",
-                request.url, request.duplicate_index, request.extension, v,
+                "{}{}~{}.{}/.{}",
+                request.url, request.filename, request.duplicate_index, request.extension, v,
             ),
             (_, None) => format!(
-                "{}~{}.{}",
-                request.url, request.duplicate_index, request.extension,
+                "{}{}~{}.{}",
+                request.url, request.filename, request.duplicate_index, request.extension,
             ),
         };
 
@@ -658,7 +666,7 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    (hyper::StatusCode::BAD_REQUEST, _) => {
+                    (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
                             kind: FSObject::NOT_EXISTING,
                             error: None,
@@ -666,12 +674,12 @@ impl TildeBuster {
                         };
                         tx.send(res).unwrap();
                     }
-                    _ => {
-                        warn!(
-                            "Got invalid HTTP status code when bruteforcing duplicates: {}",
-                            res.status()
-                        );
-                    }
+                    // _ => {
+                    //     warn!(
+                    //         "Got invalid HTTP status code when bruteforcing duplicates: {}",
+                    //         res.status()
+                    //     );
+                    // }
                 }
 
                 Ok(())
