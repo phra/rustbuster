@@ -63,7 +63,7 @@ impl TildeBuster {
         let mut http_connector = HttpConnector::new(self.n_threads);
         http_connector.enforce_http(false);
         let https_connector = HttpsConnector::from((http_connector, tls_connector));
-        let client = Client::builder().build(https_connector);
+        let client = Client::builder().keep_alive(false).build(https_connector);
         let n_threads = self.n_threads;
         let mut current_numbers_of_request = 0;
         let chars = "abcdefghijklmnopqrstuvwxyz1234567890-_"
