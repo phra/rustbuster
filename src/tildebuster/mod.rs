@@ -76,7 +76,6 @@ impl TildeBuster {
             .filter(|c| !c.is_empty())
             .map(|c| c.to_owned())
             .collect::<Vec<String>>();
-        let total_numbers_of_request = chars.len();
         let start_time = SystemTime::now();
         let mut result_processor = TildeScanProcessor::new();
         let output = self.output.clone();
@@ -85,15 +84,12 @@ impl TildeBuster {
         let bar = if self.no_progress_bar {
             ProgressBar::hidden()
         } else {
-            ProgressBar::new(total_numbers_of_request as u64)
+            ProgressBar::new_spinner()
         };
         let tx1 = tx.clone();
         let client1 = client.clone();
         let chars1 = chars.clone();
-        bar.set_draw_delta(100);
-        bar.set_style(ProgressStyle::default_bar()
-            .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
-            .progress_chars("#>-"));
+        bar.set_style(ProgressStyle::default_spinner().template("{spinner} [{elapsed_precise}] {msg}"));
 
         let fut = self
             .check_iis_version(&client)
@@ -146,11 +142,10 @@ impl TildeBuster {
                                 let seconds_from_start =
                                     start_time.elapsed().unwrap().as_millis() / 1000;
                                 if seconds_from_start != 0 {
-                                    bar.set_message(
-                                        &(current_numbers_of_request as u64
-                                            / seconds_from_start as u64)
-                                            .to_string(),
-                                    );
+                                    bar.set_message(&format!("{} requests done | req/s: {}",
+                                        current_numbers_of_request,
+                                        current_numbers_of_request as u64 / seconds_from_start as u64,
+                                        ));
                                 } else {
                                     bar.set_message("warming up...")
                                 }
