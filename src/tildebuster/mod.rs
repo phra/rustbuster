@@ -110,7 +110,7 @@ impl TildeBuster {
                             );
                             Ok(())
                         } else {
-                            let mut spanwed_futures = chars.len();
+                            let mut spawned_futures = chars.len();
                             let (tx_futures, rx_futures) = mpsc::unbounded::<Box<dyn Future<Item = (), Error = ()> + Send + 'static>>();
                             let stream_of_futures = rx_futures
                                 .map(|fut| {
@@ -147,11 +147,11 @@ impl TildeBuster {
                             rt::spawn(stream);
                             rt::spawn(stream_of_futures);
 
-                            while spanwed_futures > 0 {
-                                debug!("spawned_futures: {}", spanwed_futures);
+                            while spawned_futures > 0 {
+                                debug!("spawned_futures: {}", spawned_futures);
                                 current_numbers_of_request = current_numbers_of_request + 1;
                                 bar.inc(1);
-                                spanwed_futures = spanwed_futures - 1;
+                                spawned_futures = spawned_futures - 1;
                                 let seconds_from_start =
                                     start_time.elapsed().unwrap().as_millis() / 1000;
                                 if seconds_from_start != 0 {
@@ -246,7 +246,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ))).unwrap();
-                                                spanwed_futures = spanwed_futures + 1;
+                                                spawned_futures = spawned_futures + 1;
                                             }
 
                                             result_processor.maybe_add_result(msg);
@@ -269,7 +269,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ))).unwrap();
-                                                spanwed_futures = spanwed_futures + 1;
+                                                spawned_futures = spawned_futures + 1;
                                             }
 
                                             result_processor.maybe_add_result(msg);
@@ -284,7 +284,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ))).unwrap();
-                                                spanwed_futures = spanwed_futures + 1;
+                                                spawned_futures = spawned_futures + 1;
                                             }
                                         }
                                         FSObject::BRUTE_FILENAME => {
@@ -297,7 +297,7 @@ impl TildeBuster {
                                                     client1.clone(),
                                                     request,
                                                 ))).unwrap();
-                                                spanwed_futures = spanwed_futures + 1;
+                                                spawned_futures = spawned_futures + 1;
                                             }
                                         }
                                         FSObject::CHECK_IF_DIRECTORY => {
@@ -306,7 +306,7 @@ impl TildeBuster {
                                                 client1.clone(),
                                                 msg.request,
                                             ))).unwrap();
-                                            spanwed_futures = spanwed_futures + 1;
+                                            spawned_futures = spawned_futures + 1;
                                         }
                                     },
                                 }
