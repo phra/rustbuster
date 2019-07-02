@@ -2,14 +2,12 @@ use futures::Stream;
 use hyper::{
     client::HttpConnector,
     rt::{self, Future},
-    Body, Client, Method, Request, StatusCode,
+    Body, Client, Request,
 };
 use hyper_tls::{self, HttpsConnector};
-use itertools::Itertools;
 use native_tls;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::boxed::Box;
 
 use futures::sync::mpsc;
@@ -18,11 +16,9 @@ pub mod result_processor;
 
 use result_processor::{FSObject, SingleTildeScanResult, TildeRequest, TildeScanProcessor};
 
-use std::{fs, time::SystemTime};
+use std::{time::SystemTime};
 
 use indicatif::{ProgressBar, ProgressStyle};
-
-use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct TildeBuster {
@@ -569,7 +565,7 @@ impl TildeBuster {
     pub fn check_if_vulnerable(
         &self,
         client: &Client<HttpsConnector<HttpConnector>>,
-        version: IISVersion,
+        _version: IISVersion,
     ) -> impl Future<Item = bool, Error = hyper::Error> {
         let magic_suffix = match &self.extension {
             Some(v) => format!("*~1*/.{}", v),
