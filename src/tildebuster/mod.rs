@@ -178,10 +178,10 @@ impl TildeBuster {
                                         }
                                     }
                                     None => match msg.kind {
-                                        FSObject::NOT_EXISTING => {
+                                        FSObject::NotExisting => {
                                             trace!("{:?}", msg);
                                         }
-                                        FSObject::DUPLICATE_FILE => {
+                                        FSObject::DuplicateFile => {
                                             if no_progress_bar {
                                                 println!(
                                                     "File\t\t{}~{}.{}",
@@ -200,7 +200,7 @@ impl TildeBuster {
 
                                             result_processor.maybe_add_result(msg);
                                         }
-                                        FSObject::DUPLICATE_DIRECTORY => {
+                                        FSObject::DuplicateDirectory => {
                                             if no_progress_bar {
                                                 println!(
                                                     "Directory\t{}~{}",
@@ -217,7 +217,7 @@ impl TildeBuster {
 
                                             result_processor.maybe_add_result(msg);
                                         }
-                                        FSObject::FILE => {
+                                        FSObject::File => {
                                             if no_progress_bar {
                                                 println!(
                                                     "File\t\t{}~{}.{}",
@@ -247,7 +247,7 @@ impl TildeBuster {
 
                                             result_processor.maybe_add_result(msg);
                                         }
-                                        FSObject::DIRECTORY => {
+                                        FSObject::Directory => {
                                             if no_progress_bar {
                                                 println!("Directory\t{}~{}", msg.request.filename, msg.request.duplicate_index);
                                             } else {
@@ -270,7 +270,7 @@ impl TildeBuster {
 
                                             result_processor.maybe_add_result(msg);
                                         }
-                                        FSObject::BRUTE_EXTENSION => {
+                                        FSObject::BruteExtension => {
                                             for c in chars1.iter() {
                                                 let mut request = msg.request.clone();
                                                 request.extension =
@@ -283,7 +283,7 @@ impl TildeBuster {
                                                 spawned_futures = spawned_futures + 1;
                                             }
                                         }
-                                        FSObject::BRUTE_FILENAME => {
+                                        FSObject::BruteFilename => {
                                             for c in chars1.iter() {
                                                 let mut request = msg.request.clone();
                                                 request.filename =
@@ -296,7 +296,7 @@ impl TildeBuster {
                                                 spawned_futures = spawned_futures + 1;
                                             }
                                         }
-                                        FSObject::CHECK_IF_DIRECTORY => {
+                                        FSObject::CheckIfDirectory => {
                                             tx_futures.unbounded_send(Box::new(TildeBuster::_check_if_directory(
                                                 tx1.clone(),
                                                 client1.clone(),
@@ -357,7 +357,7 @@ impl TildeBuster {
                 match (res.status(), request.extension.len()) {
                     (hyper::StatusCode::NOT_FOUND, 3) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::FILE,
+                            kind: FSObject::File,
                             error: None,
                             request: request,
                         };
@@ -365,7 +365,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::BRUTE_EXTENSION,
+                            kind: FSObject::BruteExtension,
                             error: None,
                             request: request,
                         };
@@ -373,7 +373,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::NOT_EXISTING,
+                            kind: FSObject::NotExisting,
                             error: None,
                             request: request,
                         };
@@ -435,7 +435,7 @@ impl TildeBuster {
                 match (res.status(), res_short.status()) {
                     (_, hyper::StatusCode::NOT_FOUND) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::CHECK_IF_DIRECTORY,
+                            kind: FSObject::CheckIfDirectory,
                             error: None,
                             request: request,
                         };
@@ -443,7 +443,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::BRUTE_FILENAME,
+                            kind: FSObject::BruteFilename,
                             error: None,
                             request: request,
                         };
@@ -451,7 +451,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::NOT_EXISTING,
+                            kind: FSObject::NotExisting,
                             error: None,
                             request: request,
                         };
@@ -496,7 +496,7 @@ impl TildeBuster {
                 match res.status() {
                     hyper::StatusCode::NOT_FOUND => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::DIRECTORY,
+                            kind: FSObject::Directory,
                             error: None,
                             request: request,
                         };
@@ -504,7 +504,7 @@ impl TildeBuster {
                     }
                     hyper::StatusCode::BAD_REQUEST | _ => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::BRUTE_EXTENSION,
+                            kind: FSObject::BruteExtension,
                             error: None,
                             request: request,
                         };
@@ -656,7 +656,7 @@ impl TildeBuster {
                 match (res.status(), request.extension.len()) {
                     (hyper::StatusCode::NOT_FOUND, 3) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::DUPLICATE_FILE,
+                            kind: FSObject::DuplicateFile,
                             error: None,
                             request: request,
                         };
@@ -664,7 +664,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::NOT_FOUND, _) => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::DUPLICATE_DIRECTORY,
+                            kind: FSObject::DuplicateDirectory,
                             error: None,
                             request: request,
                         };
@@ -672,7 +672,7 @@ impl TildeBuster {
                     }
                     (hyper::StatusCode::BAD_REQUEST, _) | _ => {
                         let res = SingleTildeScanResult {
-                            kind: FSObject::NOT_EXISTING,
+                            kind: FSObject::NotExisting,
                             error: None,
                             request: request,
                         };

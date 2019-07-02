@@ -3,14 +3,14 @@ use std::{fs::File, io::Write, path::Path, str};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FSObject {
-    FILE,
-    DIRECTORY,
-    DUPLICATE_FILE,
-    DUPLICATE_DIRECTORY,
-    BRUTE_FILENAME,
-    BRUTE_EXTENSION,
-    CHECK_IF_DIRECTORY,
-    NOT_EXISTING,
+    File,
+    Directory,
+    DuplicateFile,
+    DuplicateDirectory,
+    BruteFilename,
+    BruteExtension,
+    CheckIfDirectory,
+    NotExisting,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
