@@ -6,9 +6,9 @@ use hyper::{
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
+use std::boxed::Box;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::boxed::Box;
 
 use futures::sync::mpsc;
 
@@ -16,7 +16,7 @@ pub mod result_processor;
 
 use result_processor::{FSObject, SingleTildeScanResult, TildeRequest, TildeScanProcessor};
 
-use std::{time::SystemTime};
+use std::time::SystemTime;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -88,7 +88,9 @@ impl TildeBuster {
         let tx1 = tx.clone();
         let client1 = client.clone();
         let chars1 = chars.clone();
-        bar.set_style(ProgressStyle::default_spinner().template("{spinner} [{elapsed_precise}] {msg}"));
+        bar.set_style(
+            ProgressStyle::default_spinner().template("{spinner} [{elapsed_precise}] {msg}"),
+        );
 
         let fut = self
             .check_iis_version(&client)
@@ -107,7 +109,9 @@ impl TildeBuster {
                             Ok(())
                         } else {
                             let mut spawned_futures = chars.len();
-                            let (tx_futures, rx_futures) = mpsc::unbounded::<Box<dyn Future<Item = (), Error = ()> + Send + 'static>>();
+                            let (tx_futures, rx_futures) = mpsc::unbounded::<
+                                Box<dyn Future<Item = (), Error = ()> + Send + 'static>,
+                            >();
                             let stream_of_futures = rx_futures
                                 .map(|fut| {
                                     rt::spawn(fut);
@@ -151,10 +155,12 @@ impl TildeBuster {
                                 let seconds_from_start =
                                     start_time.elapsed().unwrap().as_millis() / 1000;
                                 if seconds_from_start != 0 {
-                                    bar.set_message(&format!("{} requests done | req/s: {}",
+                                    bar.set_message(&format!(
+                                        "{} requests done | req/s: {}",
                                         current_numbers_of_request,
-                                        current_numbers_of_request as u64 / seconds_from_start as u64,
-                                        ));
+                                        current_numbers_of_request as u64
+                                            / seconds_from_start as u64,
+                                    ));
                                 } else {
                                     bar.set_message("warming up...")
                                 }
@@ -237,11 +243,15 @@ impl TildeBuster {
                                             for c in chars_duplicate.iter() {
                                                 let mut request = msg.request.clone();
                                                 request.duplicate_index = c.clone();
-                                                tx_futures.unbounded_send(Box::new(TildeBuster::_brute_duplicate(
-                                                    tx1.clone(),
-                                                    client1.clone(),
-                                                    request,
-                                                ))).unwrap();
+                                                tx_futures
+                                                    .unbounded_send(Box::new(
+                                                        TildeBuster::_brute_duplicate(
+                                                            tx1.clone(),
+                                                            client1.clone(),
+                                                            request,
+                                                        ),
+                                                    ))
+                                                    .unwrap();
                                                 spawned_futures = spawned_futures + 1;
                                             }
 
@@ -249,22 +259,31 @@ impl TildeBuster {
                                         }
                                         FSObject::Directory => {
                                             if no_progress_bar {
-                                                println!("Directory\t{}~{}", msg.request.filename, msg.request.duplicate_index);
+                                                println!(
+                                                    "Directory\t{}~{}",
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index
+                                                );
                                             } else {
                                                 bar.println(format!(
                                                     "Directory\t{}~{}",
-                                                    msg.request.filename, msg.request.duplicate_index
+                                                    msg.request.filename,
+                                                    msg.request.duplicate_index
                                                 ));
                                             }
 
                                             for c in chars_duplicate.iter() {
                                                 let mut request = msg.request.clone();
                                                 request.duplicate_index = c.clone();
-                                                tx_futures.unbounded_send(Box::new(TildeBuster::_brute_duplicate(
-                                                    tx1.clone(),
-                                                    client1.clone(),
-                                                    request,
-                                                ))).unwrap();
+                                                tx_futures
+                                                    .unbounded_send(Box::new(
+                                                        TildeBuster::_brute_duplicate(
+                                                            tx1.clone(),
+                                                            client1.clone(),
+                                                            request,
+                                                        ),
+                                                    ))
+                                                    .unwrap();
                                                 spawned_futures = spawned_futures + 1;
                                             }
 
@@ -275,11 +294,15 @@ impl TildeBuster {
                                                 let mut request = msg.request.clone();
                                                 request.extension =
                                                     format!("{}{}", request.extension, c);
-                                                tx_futures.unbounded_send(Box::new(TildeBuster::_brute_extension(
-                                                    tx1.clone(),
-                                                    client1.clone(),
-                                                    request,
-                                                ))).unwrap();
+                                                tx_futures
+                                                    .unbounded_send(Box::new(
+                                                        TildeBuster::_brute_extension(
+                                                            tx1.clone(),
+                                                            client1.clone(),
+                                                            request,
+                                                        ),
+                                                    ))
+                                                    .unwrap();
                                                 spawned_futures = spawned_futures + 1;
                                             }
                                         }
@@ -288,20 +311,28 @@ impl TildeBuster {
                                                 let mut request = msg.request.clone();
                                                 request.filename =
                                                     format!("{}{}", request.filename, c);
-                                                tx_futures.unbounded_send(Box::new(TildeBuster::_brute_filename(
-                                                    tx1.clone(),
-                                                    client1.clone(),
-                                                    request,
-                                                ))).unwrap();
+                                                tx_futures
+                                                    .unbounded_send(Box::new(
+                                                        TildeBuster::_brute_filename(
+                                                            tx1.clone(),
+                                                            client1.clone(),
+                                                            request,
+                                                        ),
+                                                    ))
+                                                    .unwrap();
                                                 spawned_futures = spawned_futures + 1;
                                             }
                                         }
                                         FSObject::CheckIfDirectory => {
-                                            tx_futures.unbounded_send(Box::new(TildeBuster::_check_if_directory(
-                                                tx1.clone(),
-                                                client1.clone(),
-                                                msg.request,
-                                            ))).unwrap();
+                                            tx_futures
+                                                .unbounded_send(Box::new(
+                                                    TildeBuster::_check_if_directory(
+                                                        tx1.clone(),
+                                                        client1.clone(),
+                                                        msg.request,
+                                                    ),
+                                                ))
+                                                .unwrap();
                                             spawned_futures = spawned_futures + 1;
                                         }
                                     },
@@ -378,13 +409,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    }
-                    // _ => {
-                    //     warn!(
-                    //         "Got invalid HTTP status code when bruteforcing the extension: {}",
-                    //         res.status()
-                    //     );
-                    // }
+                    } // _ => {
+                      //     warn!(
+                      //         "Got invalid HTTP status code when bruteforcing the extension: {}",
+                      //         res.status()
+                      //     );
+                      // }
                 }
 
                 Ok(())
@@ -456,13 +486,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    }
-                    // _ => {
-                    //     warn!(
-                    //         "Got invalid HTTP status code when bruteforcing the filename: {}",
-                    //         res.status()
-                    //     );
-                    // }
+                    } // _ => {
+                      //     warn!(
+                      //         "Got invalid HTTP status code when bruteforcing the filename: {}",
+                      //         res.status()
+                      //     );
+                      // }
                 }
 
                 Ok(())
@@ -509,13 +538,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    }
-                    // _ => {
-                    //     warn!(
-                    //         "Got invalid HTTP status code when checking if directory: {}",
-                    //         res.status()
-                    //     );
-                    // }
+                    } // _ => {
+                      //     warn!(
+                      //         "Got invalid HTTP status code when checking if directory: {}",
+                      //         res.status()
+                      //     );
+                      // }
                 }
 
                 Ok(())
@@ -537,9 +565,9 @@ impl TildeBuster {
             .body(Body::from(self.http_body.clone()))
             .expect("Request builder");
 
-        client.request(hyper_request).and_then(move |res| {
-            Ok(TildeBuster::map_iis_version(res.headers()))
-        })
+        client
+            .request(hyper_request)
+            .and_then(move |res| Ok(TildeBuster::map_iis_version(res.headers())))
     }
 
     pub fn map_iis_version(headers: &hyper::HeaderMap) -> IISVersion {
@@ -558,7 +586,7 @@ impl TildeBuster {
                 "Microsoft-IIS/8.5" => IISVersion::IIS85,
                 "Microsoft-IIS/10" => IISVersion::IIS10,
                 _ => IISVersion::Unknown,
-            }
+            },
         }
     }
 
@@ -631,8 +659,14 @@ impl TildeBuster {
         request: TildeRequest,
     ) -> impl Future<Item = (), Error = ()> {
         let vuln_url = match (&request.extension.len(), &request.redirect_extension) {
-            (0, Some(v)) => format!("{}{}~{}/.{}", request.url, request.filename, request.duplicate_index, v,),
-            (0, None) => format!("{}{}~{}", request.url, request.filename, request.duplicate_index,),
+            (0, Some(v)) => format!(
+                "{}{}~{}/.{}",
+                request.url, request.filename, request.duplicate_index, v,
+            ),
+            (0, None) => format!(
+                "{}{}~{}",
+                request.url, request.filename, request.duplicate_index,
+            ),
             (_, Some(v)) => format!(
                 "{}{}~{}.{}/.{}",
                 request.url, request.filename, request.duplicate_index, request.extension, v,
@@ -677,13 +711,12 @@ impl TildeBuster {
                             request: request,
                         };
                         tx.send(res).unwrap();
-                    }
-                    // _ => {
-                    //     warn!(
-                    //         "Got invalid HTTP status code when bruteforcing duplicates: {}",
-                    //         res.status()
-                    //     );
-                    // }
+                    } // _ => {
+                      //     warn!(
+                      //         "Got invalid HTTP status code when bruteforcing duplicates: {}",
+                      //         res.status()
+                      //     );
+                      // }
                 }
 
                 Ok(())
