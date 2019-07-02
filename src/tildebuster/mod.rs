@@ -52,7 +52,7 @@ pub enum IISVersion {
 }
 
 impl TildeBuster {
-    pub fn run(self) {
+    pub fn run(mut self) {
         let (tx, rx) = channel::<SingleTildeScanResult>();
         let mut tls_connector_builder = native_tls::TlsConnector::builder();
         tls_connector_builder.danger_accept_invalid_certs(self.ignore_certificate);
@@ -91,6 +91,10 @@ impl TildeBuster {
         bar.set_style(
             ProgressStyle::default_spinner().template("{spinner} [{elapsed_precise}] {msg}"),
         );
+
+        if !self.url.ends_with("/") {
+            self.url = format!("{}/", self.url);
+        }
 
         let fut = self
             .check_iis_version(&client)
