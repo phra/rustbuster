@@ -83,7 +83,7 @@ fn main() {
         .subcommand(set_tilde_args(set_http_args(set_common_args(SubCommand::with_name("tilde"))))
             .about("IIS 8.3 shortname enumeration mode")
             .after_help("EXAMPLE:
-    rustbuster tilde -u http://localhost:3000/ -e aspx"))
+    rustbuster tilde -u http://localhost:3000/ -e aspx -X OPTIONS"))
         .subcommand(set_wordlist_args(set_fuzz_args(set_body_args(set_http_args(set_common_args(SubCommand::with_name("fuzz"))))))
             .about("Custom fuzzing enumeration mode")
             .after_help("EXAMPLE:
