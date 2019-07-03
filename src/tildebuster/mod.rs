@@ -107,9 +107,8 @@ impl TildeBuster {
             duplicate_index: "1".to_owned(),
         };
 
-        let (tx_futures, rx_futures) = mpsc::unbounded::<
-            Box<dyn Future<Item = (), Error = ()> + Send + 'static>,
-        >();
+        let (tx_futures, rx_futures) =
+            mpsc::unbounded::<Box<dyn Future<Item = (), Error = ()> + Send + 'static>>();
         let stream_of_futures = rx_futures
             .map(|fut| {
                 rt::spawn(fut);
@@ -118,10 +117,16 @@ impl TildeBuster {
             .buffer_unordered(self.n_threads)
             .for_each(Ok)
             .map_err(|err| eprintln!("Err {:?}", err));
-        
+
         std::thread::spawn(|| rt::run(stream_of_futures));
 
-        tx_futures.unbounded_send(Box::new(TildeBuster::_run_checks(tx1.clone(), client1.clone(), base_request))).unwrap();
+        tx_futures
+            .unbounded_send(Box::new(TildeBuster::_run_checks(
+                tx1.clone(),
+                client1.clone(),
+                base_request,
+            )))
+            .unwrap();
 
         let mut spawned_futures = 1;
 
@@ -130,14 +135,12 @@ impl TildeBuster {
             current_numbers_of_request = current_numbers_of_request + 1;
             bar.inc(1);
             spawned_futures = spawned_futures - 1;
-            let seconds_from_start =
-                start_time.elapsed().unwrap().as_millis() / 1000;
+            let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
             if seconds_from_start != 0 {
                 bar.set_message(&format!(
                     "{} requests done | req/s: {}",
                     current_numbers_of_request,
-                    current_numbers_of_request as u64
-                        / seconds_from_start as u64,
+                    current_numbers_of_request as u64 / seconds_from_start as u64,
                 ));
             } else {
                 bar.set_message("warming up...")
@@ -154,9 +157,7 @@ impl TildeBuster {
             match &msg.error {
                 Some(e) => {
                     error!("{:?}", e);
-                    if current_numbers_of_request == 1
-                        || exit_on_connection_errors
-                    {
+                    if current_numbers_of_request == 1 || exit_on_connection_errors {
                         warn!("Check connectivity to the target");
                         break;
                     }
@@ -164,9 +165,7 @@ impl TildeBuster {
                 None => match msg.kind {
                     FSObject::NotVulnerable => {
                         error!("The target doesn't seem to be vulnerable");
-                        warn!(
-                            "Try setting HTTP method to OPTIONS or add an extension like aspx"
-                        );
+                        warn!("Try setting HTTP method to OPTIONS or add an extension like aspx");
                     }
                     FSObject::Vulnerable => {
                         for c in chars.iter() {
@@ -182,7 +181,13 @@ impl TildeBuster {
                                 duplicate_index: "1".to_owned(),
                             };
 
-                            tx_futures.unbounded_send(Box::new(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request))).unwrap();
+                            tx_futures
+                                .unbounded_send(Box::new(TildeBuster::_brute_filename(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    request,
+                                )))
+                                .unwrap();
                             spawned_futures = spawned_futures + 1;
                         }
                     }
@@ -212,14 +217,12 @@ impl TildeBuster {
                         if no_progress_bar {
                             println!(
                                 "Directory\t{}~{}",
-                                msg.request.filename,
-                                msg.request.duplicate_index,
+                                msg.request.filename, msg.request.duplicate_index,
                             );
                         } else {
                             bar.println(format!(
                                 "Directory\t{}~{}",
-                                msg.request.filename,
-                                msg.request.duplicate_index,
+                                msg.request.filename, msg.request.duplicate_index,
                             ));
                         }
 
@@ -246,13 +249,11 @@ impl TildeBuster {
                             let mut request = msg.request.clone();
                             request.duplicate_index = c.clone();
                             tx_futures
-                                .unbounded_send(Box::new(
-                                    TildeBuster::_brute_duplicate(
-                                        tx1.clone(),
-                                        client1.clone(),
-                                        request,
-                                    ),
-                                ))
+                                .unbounded_send(Box::new(TildeBuster::_brute_duplicate(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    request,
+                                )))
                                 .unwrap();
                             spawned_futures = spawned_futures + 1;
                         }
@@ -263,14 +264,12 @@ impl TildeBuster {
                         if no_progress_bar {
                             println!(
                                 "Directory\t{}~{}",
-                                msg.request.filename,
-                                msg.request.duplicate_index
+                                msg.request.filename, msg.request.duplicate_index
                             );
                         } else {
                             bar.println(format!(
                                 "Directory\t{}~{}",
-                                msg.request.filename,
-                                msg.request.duplicate_index
+                                msg.request.filename, msg.request.duplicate_index
                             ));
                         }
 
@@ -278,13 +277,11 @@ impl TildeBuster {
                             let mut request = msg.request.clone();
                             request.duplicate_index = c.clone();
                             tx_futures
-                                .unbounded_send(Box::new(
-                                    TildeBuster::_brute_duplicate(
-                                        tx1.clone(),
-                                        client1.clone(),
-                                        request,
-                                    ),
-                                ))
+                                .unbounded_send(Box::new(TildeBuster::_brute_duplicate(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    request,
+                                )))
                                 .unwrap();
                             spawned_futures = spawned_futures + 1;
                         }
@@ -294,16 +291,13 @@ impl TildeBuster {
                     FSObject::BruteExtension => {
                         for c in chars1.iter() {
                             let mut request = msg.request.clone();
-                            request.extension =
-                                format!("{}{}", request.extension, c);
+                            request.extension = format!("{}{}", request.extension, c);
                             tx_futures
-                                .unbounded_send(Box::new(
-                                    TildeBuster::_brute_extension(
-                                        tx1.clone(),
-                                        client1.clone(),
-                                        request,
-                                    ),
-                                ))
+                                .unbounded_send(Box::new(TildeBuster::_brute_extension(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    request,
+                                )))
                                 .unwrap();
                             spawned_futures = spawned_futures + 1;
                         }
@@ -311,29 +305,24 @@ impl TildeBuster {
                     FSObject::BruteFilename => {
                         for c in chars1.iter() {
                             let mut request = msg.request.clone();
-                            request.filename =
-                                format!("{}{}", request.filename, c);
+                            request.filename = format!("{}{}", request.filename, c);
                             tx_futures
-                                .unbounded_send(Box::new(
-                                    TildeBuster::_brute_filename(
-                                        tx1.clone(),
-                                        client1.clone(),
-                                        request,
-                                    ),
-                                ))
+                                .unbounded_send(Box::new(TildeBuster::_brute_filename(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    request,
+                                )))
                                 .unwrap();
                             spawned_futures = spawned_futures + 1;
                         }
                     }
                     FSObject::CheckIfDirectory => {
                         tx_futures
-                            .unbounded_send(Box::new(
-                                TildeBuster::_check_if_directory(
-                                    tx1.clone(),
-                                    client1.clone(),
-                                    msg.request,
-                                ),
-                            ))
+                            .unbounded_send(Box::new(TildeBuster::_check_if_directory(
+                                tx1.clone(),
+                                client1.clone(),
+                                msg.request,
+                            )))
                             .unwrap();
                         spawned_futures = spawned_futures + 1;
                     }
@@ -653,7 +642,11 @@ impl TildeBuster {
         TildeBuster::check_iis_version(&client, request.clone())
             .and_then(move |version| {
                 futures::future::ok(version.clone())
-                    .join(TildeBuster::check_if_vulnerable(&client.clone(), request.clone(), version))
+                    .join(TildeBuster::check_if_vulnerable(
+                        &client.clone(),
+                        request.clone(),
+                        version,
+                    ))
                     .and_then(move |(version, is_vulnerable)| {
                         info!("iis version: {:?}", version);
                         info!("is vulnerable: {:?}", is_vulnerable);
