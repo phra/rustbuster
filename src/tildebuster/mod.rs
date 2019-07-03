@@ -110,10 +110,6 @@ impl TildeBuster {
         let (tx_futures, rx_futures) =
             mpsc::unbounded::<Box<dyn Future<Item = (), Error = ()> + Send + 'static>>();
         let stream_of_futures = rx_futures
-            .map(|fut| {
-                rt::spawn(fut);
-                Ok(())
-            })
             .buffer_unordered(self.n_threads)
             .for_each(Ok)
             .map_err(|err| eprintln!("Err {:?}", err));
@@ -138,9 +134,10 @@ impl TildeBuster {
             let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
             if seconds_from_start != 0 {
                 bar.set_message(&format!(
-                    "{} requests done | req/s: {}",
+                    "{} requests done | req/s: {} | queued reqs: {}",
                     current_numbers_of_request,
                     current_numbers_of_request as u64 / seconds_from_start as u64,
+                    spawned_futures,
                 ));
             } else {
                 bar.set_message("warming up...")
