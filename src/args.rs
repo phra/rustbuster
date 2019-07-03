@@ -2,12 +2,15 @@ use clap::{App, Arg};
 use terminal_size::{terminal_size, Height, Width};
 
 pub struct CommonArgs {
-    pub wordlist_paths: Vec<String>,
     pub no_banner: bool,
     pub no_progress_bar: bool,
     pub exit_on_connection_errors: bool,
     pub n_threads: usize,
     pub output: String,
+}
+
+pub struct WordlistArgs {
+    pub wordlist_paths: Vec<String>,
 }
 
 pub struct DNSArgs {
@@ -35,6 +38,10 @@ pub struct DirArgs {
     pub extensions: Vec<String>,
 }
 
+pub struct TildeArgs {
+    pub extension: Option<String>,
+}
+
 pub struct FuzzArgs {
     pub csrf_url: Option<String>,
     pub csrf_regex: Option<String>,
@@ -53,16 +60,6 @@ pub fn set_common_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name("no-banner")
             .long("no-banner")
             .help("Skips initial banner"),
-    )
-    .arg(
-        Arg::with_name("wordlist")
-            .long("wordlist")
-            .help("Sets the wordlist")
-            .short("w")
-            .takes_value(true)
-            .multiple(true)
-            .use_delimiter(true)
-            .required(true),
     )
     .arg(
         Arg::with_name("threads")
@@ -198,6 +195,29 @@ pub fn set_dir_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+pub fn set_wordlist_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("wordlist")
+            .long("wordlist")
+            .help("Sets the wordlist")
+            .short("w")
+            .takes_value(true)
+            .multiple(true)
+            .use_delimiter(true)
+            .required(true),
+    )
+}
+
+pub fn set_tilde_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("extension")
+            .long("extension")
+            .help("Sets the redirect extension")
+            .short("e")
+            .takes_value(true),
+    )
+}
+
 pub fn set_dns_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("domain")
@@ -255,11 +275,6 @@ pub fn set_fuzz_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs {
-    let wordlist_paths = submatches
-        .values_of("wordlist")
-        .unwrap()
-        .map(|w| w.to_owned())
-        .collect::<Vec<String>>();
     let mut no_banner = submatches.is_present("no-banner");
     let mut no_progress_bar = submatches.is_present("no-progress-bar");
     let exit_on_connection_errors = submatches.is_present("exit-on-error");
@@ -288,7 +303,6 @@ pub fn extract_common_args<'a>(submatches: &clap::ArgMatches<'a>) -> CommonArgs 
     }
 
     CommonArgs {
-        wordlist_paths,
         no_banner,
         no_progress_bar,
         exit_on_connection_errors,
@@ -446,4 +460,39 @@ pub fn url_is_valid(url: &str) -> bool {
             }
         },
     }
+}
+
+pub fn extract_tilde_args<'a>(submatches: &clap::ArgMatches<'a>) -> TildeArgs {
+    let extension = match submatches.value_of("extension") {
+        Some(v) => Some(v.to_owned()),
+        None => None,
+    };
+
+    TildeArgs { extension }
+}
+
+pub fn extract_wordlist_args<'a>(submatches: &clap::ArgMatches<'a>) -> Result<WordlistArgs, ()> {
+    let wordlist_paths = submatches
+        .values_of("wordlist")
+        .unwrap()
+        .map(|w| w.to_owned())
+        .collect::<Vec<String>>();
+
+    let all_wordlists_exist = wordlist_paths
+        .iter()
+        .map(|wordlist_path| {
+            if std::fs::metadata(wordlist_path).is_err() {
+                error!("Specified wordlist does not exist: {}", wordlist_path);
+                return false;
+            } else {
+                return true;
+            }
+        })
+        .fold(true, |acc, e| acc && e);
+
+    if !all_wordlists_exist {
+        return Err(());
+    }
+
+    Ok(WordlistArgs { wordlist_paths })
 }
