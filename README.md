@@ -192,3 +192,37 @@ EXAMPLE:
         --csrf-url "http://localhost:3000/csrf" \
         --csrf-regex '\{"csrf":"(\w+)"\}'
 ```
+
+### `tilde` usage
+
+```shell
+rustbuster-tilde
+IIS 8.3 shortname enumeration mode
+
+USAGE:
+    rustbuster tilde [FLAGS] [OPTIONS] --url <url>
+
+FLAGS:
+    -K, --exit-on-error         Exits on connection errors
+    -h, --help                  Prints help information
+    -k, --ignore-certificate    Disables TLS certificate validation
+        --no-banner             Skips initial banner
+        --no-progress-bar       Disables the progress bar
+    -V, --version               Prints version information
+    -v, --verbose               Sets the level of verbosity
+
+OPTIONS:
+    -e, --extension <extension>                          Sets the redirect extension
+    -b, --http-body <http-body>                          Uses the specified HTTP body [default: ]
+    -H, --http-header <http-header>...                   Appends the specified HTTP header
+    -X, --http-method <http-method>                      Uses the specified HTTP method [default: GET]
+    -S, --ignore-status-codes <ignore-status-codes>      Sets the list of status codes to ignore [default: 404]
+    -s, --include-status-codes <include-status-codes>    Sets the list of status codes to include [default: ]
+    -o, --output <output>                                Saves the results in the specified file [default: ]
+    -t, --threads <threads>                              Sets the amount of concurrent requests [default: 10]
+    -u, --url <url>                                      Sets the target URL
+    -a, --user-agent <user-agent>                        Uses the specified User-Agent [default: rustbuster]
+
+EXAMPLE:
+    rustbuster tilde -u http://localhost:3000/ -e aspx -X OPTIONS
+```
