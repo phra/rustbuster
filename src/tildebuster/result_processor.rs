@@ -11,6 +11,8 @@ pub enum FSObject {
     BruteExtension,
     CheckIfDirectory,
     NotExisting,
+    Vulnerable,
+    NotVulnerable,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

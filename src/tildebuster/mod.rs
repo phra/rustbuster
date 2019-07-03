@@ -63,7 +63,6 @@ impl TildeBuster {
         http_connector.enforce_http(false);
         let https_connector = HttpsConnector::from((http_connector, tls_connector));
         let client = Client::builder().keep_alive(false).build(https_connector);
-        let n_threads = self.n_threads;
         let mut current_numbers_of_request = 0;
         let chars = "abcdefghijklmnopqrstuvwxyz1234567890-_"
             .split("")
@@ -96,269 +95,258 @@ impl TildeBuster {
             self.url = format!("{}/", self.url);
         }
 
-        let fut = self
-            .check_iis_version(&client)
-            .and_then(move |version| {
-                futures::future::ok(version.clone())
-                    .join(self.check_if_vulnerable(&client, version))
-                    .and_then(move |(version, is_vulnerable)| {
-                        info!("iis version: {:?}", version);
-                        info!("is vulnerable: {:?}", is_vulnerable);
+        let base_request = TildeRequest {
+            url: self.url.clone(),
+            http_method: self.http_method.clone(),
+            http_headers: self.http_headers.clone(),
+            http_body: self.http_body.clone(),
+            user_agent: self.user_agent.clone(),
+            filename: "".to_owned(),
+            extension: "".to_owned(),
+            redirect_extension: self.extension.clone(),
+            duplicate_index: "1".to_owned(),
+        };
 
-                        if !is_vulnerable {
-                            error!("The target doesn't seem to be vulnerable");
-                            warn!(
-                                "Try setting HTTP method to OPTIONS or add an extension like aspx"
-                            );
-                            Ok(())
-                        } else {
-                            let mut spawned_futures = chars.len();
-                            let (tx_futures, rx_futures) = mpsc::unbounded::<
-                                Box<dyn Future<Item = (), Error = ()> + Send + 'static>,
-                            >();
-                            let stream_of_futures = rx_futures
-                                .map(|fut| {
-                                    rt::spawn(fut);
-                                    Ok(())
-                                })
-                                .buffer_unordered(self.n_threads)
-                                .for_each(Ok)
-                                .map_err(|err| eprintln!("Err {:?}", err));
-                            let stream = futures::stream::iter_ok(chars)
-                                .map(move |c| {
-                                    let request = TildeRequest {
-                                        url: self.url.clone(),
-                                        http_method: self.http_method.clone(),
-                                        http_headers: self.http_headers.clone(),
-                                        http_body: self.http_body.clone(),
-                                        user_agent: self.user_agent.clone(),
-                                        filename: c,
-                                        extension: "".to_owned(),
-                                        redirect_extension: self.extension.clone(),
-                                        duplicate_index: "1".to_owned(),
-                                    };
-
-                                    TildeBuster::_brute_filename(
-                                        tx.clone(),
-                                        client.clone(),
-                                        request,
-                                    )
-                                })
-                                .buffer_unordered(n_threads)
-                                .for_each(Ok)
-                                .map_err(|err| eprintln!("Err {:?}", err));
-
-                            rt::spawn(stream);
-                            rt::spawn(stream_of_futures);
-
-                            while spawned_futures > 0 {
-                                debug!("spawned_futures: {}", spawned_futures);
-                                current_numbers_of_request = current_numbers_of_request + 1;
-                                bar.inc(1);
-                                spawned_futures = spawned_futures - 1;
-                                let seconds_from_start =
-                                    start_time.elapsed().unwrap().as_millis() / 1000;
-                                if seconds_from_start != 0 {
-                                    bar.set_message(&format!(
-                                        "{} requests done | req/s: {}",
-                                        current_numbers_of_request,
-                                        current_numbers_of_request as u64
-                                            / seconds_from_start as u64,
-                                    ));
-                                } else {
-                                    bar.set_message("warming up...")
-                                }
-
-                                let msg = match rx.recv() {
-                                    Ok(msg) => msg,
-                                    Err(_err) => {
-                                        error!("{:?}", _err);
-                                        break;
-                                    }
-                                };
-
-                                match &msg.error {
-                                    Some(e) => {
-                                        error!("{:?}", e);
-                                        if current_numbers_of_request == 1
-                                            || exit_on_connection_errors
-                                        {
-                                            warn!("Check connectivity to the target");
-                                            break;
-                                        }
-                                    }
-                                    None => match msg.kind {
-                                        FSObject::NotExisting => {
-                                            trace!("{:?}", msg);
-                                        }
-                                        FSObject::DuplicateFile => {
-                                            if no_progress_bar {
-                                                println!(
-                                                    "File\t\t{}~{}.{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                    msg.request.extension,
-                                                );
-                                            } else {
-                                                bar.println(format!(
-                                                    "File\t\t{}~{}.{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                    msg.request.extension,
-                                                ));
-                                            }
-
-                                            result_processor.maybe_add_result(msg);
-                                        }
-                                        FSObject::DuplicateDirectory => {
-                                            if no_progress_bar {
-                                                println!(
-                                                    "Directory\t{}~{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                );
-                                            } else {
-                                                bar.println(format!(
-                                                    "Directory\t{}~{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                ));
-                                            }
-
-                                            result_processor.maybe_add_result(msg);
-                                        }
-                                        FSObject::File => {
-                                            if no_progress_bar {
-                                                println!(
-                                                    "File\t\t{}~{}.{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                    msg.request.extension,
-                                                );
-                                            } else {
-                                                bar.println(format!(
-                                                    "File\t\t{}~{}.{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index,
-                                                    msg.request.extension,
-                                                ));
-                                            }
-
-                                            for c in chars_duplicate.iter() {
-                                                let mut request = msg.request.clone();
-                                                request.duplicate_index = c.clone();
-                                                tx_futures
-                                                    .unbounded_send(Box::new(
-                                                        TildeBuster::_brute_duplicate(
-                                                            tx1.clone(),
-                                                            client1.clone(),
-                                                            request,
-                                                        ),
-                                                    ))
-                                                    .unwrap();
-                                                spawned_futures = spawned_futures + 1;
-                                            }
-
-                                            result_processor.maybe_add_result(msg);
-                                        }
-                                        FSObject::Directory => {
-                                            if no_progress_bar {
-                                                println!(
-                                                    "Directory\t{}~{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index
-                                                );
-                                            } else {
-                                                bar.println(format!(
-                                                    "Directory\t{}~{}",
-                                                    msg.request.filename,
-                                                    msg.request.duplicate_index
-                                                ));
-                                            }
-
-                                            for c in chars_duplicate.iter() {
-                                                let mut request = msg.request.clone();
-                                                request.duplicate_index = c.clone();
-                                                tx_futures
-                                                    .unbounded_send(Box::new(
-                                                        TildeBuster::_brute_duplicate(
-                                                            tx1.clone(),
-                                                            client1.clone(),
-                                                            request,
-                                                        ),
-                                                    ))
-                                                    .unwrap();
-                                                spawned_futures = spawned_futures + 1;
-                                            }
-
-                                            result_processor.maybe_add_result(msg);
-                                        }
-                                        FSObject::BruteExtension => {
-                                            for c in chars1.iter() {
-                                                let mut request = msg.request.clone();
-                                                request.extension =
-                                                    format!("{}{}", request.extension, c);
-                                                tx_futures
-                                                    .unbounded_send(Box::new(
-                                                        TildeBuster::_brute_extension(
-                                                            tx1.clone(),
-                                                            client1.clone(),
-                                                            request,
-                                                        ),
-                                                    ))
-                                                    .unwrap();
-                                                spawned_futures = spawned_futures + 1;
-                                            }
-                                        }
-                                        FSObject::BruteFilename => {
-                                            for c in chars1.iter() {
-                                                let mut request = msg.request.clone();
-                                                request.filename =
-                                                    format!("{}{}", request.filename, c);
-                                                tx_futures
-                                                    .unbounded_send(Box::new(
-                                                        TildeBuster::_brute_filename(
-                                                            tx1.clone(),
-                                                            client1.clone(),
-                                                            request,
-                                                        ),
-                                                    ))
-                                                    .unwrap();
-                                                spawned_futures = spawned_futures + 1;
-                                            }
-                                        }
-                                        FSObject::CheckIfDirectory => {
-                                            tx_futures
-                                                .unbounded_send(Box::new(
-                                                    TildeBuster::_check_if_directory(
-                                                        tx1.clone(),
-                                                        client1.clone(),
-                                                        msg.request,
-                                                    ),
-                                                ))
-                                                .unwrap();
-                                            spawned_futures = spawned_futures + 1;
-                                        }
-                                    },
-                                }
-                            }
-
-                            bar.finish();
-                            println!("{}", crate::banner::ending_time());
-
-                            if !output.is_empty() {
-                                result_processor.save_tilde_results(&output);
-                            }
-                            Ok(())
-                        }
-                    })
-            })
-            .or_else(|e| {
-                error!("{}", e);
+        let (tx_futures, rx_futures) = mpsc::unbounded::<
+            Box<dyn Future<Item = (), Error = ()> + Send + 'static>,
+        >();
+        let stream_of_futures = rx_futures
+            .map(|fut| {
+                rt::spawn(fut);
                 Ok(())
-            });
+            })
+            .buffer_unordered(self.n_threads)
+            .for_each(Ok)
+            .map_err(|err| eprintln!("Err {:?}", err));
+        
+        std::thread::spawn(|| rt::run(stream_of_futures));
 
-        rt::run(fut);
+        tx_futures.unbounded_send(Box::new(TildeBuster::_run_checks(tx1.clone(), client1.clone(), base_request))).unwrap();
+
+        let mut spawned_futures = 1;
+
+        while spawned_futures > 0 {
+            debug!("spawned_futures: {}", spawned_futures);
+            current_numbers_of_request = current_numbers_of_request + 1;
+            bar.inc(1);
+            spawned_futures = spawned_futures - 1;
+            let seconds_from_start =
+                start_time.elapsed().unwrap().as_millis() / 1000;
+            if seconds_from_start != 0 {
+                bar.set_message(&format!(
+                    "{} requests done | req/s: {}",
+                    current_numbers_of_request,
+                    current_numbers_of_request as u64
+                        / seconds_from_start as u64,
+                ));
+            } else {
+                bar.set_message("warming up...")
+            }
+
+            let msg = match rx.recv() {
+                Ok(msg) => msg,
+                Err(_err) => {
+                    error!("{:?}", _err);
+                    break;
+                }
+            };
+
+            match &msg.error {
+                Some(e) => {
+                    error!("{:?}", e);
+                    if current_numbers_of_request == 1
+                        || exit_on_connection_errors
+                    {
+                        warn!("Check connectivity to the target");
+                        break;
+                    }
+                }
+                None => match msg.kind {
+                    FSObject::NotVulnerable => {
+                        error!("The target doesn't seem to be vulnerable");
+                        warn!(
+                            "Try setting HTTP method to OPTIONS or add an extension like aspx"
+                        );
+                    }
+                    FSObject::Vulnerable => {
+                        for c in chars.iter() {
+                            let request = TildeRequest {
+                                url: self.url.clone(),
+                                http_method: self.http_method.clone(),
+                                http_headers: self.http_headers.clone(),
+                                http_body: self.http_body.clone(),
+                                user_agent: self.user_agent.clone(),
+                                filename: c.to_owned(),
+                                extension: "".to_owned(),
+                                redirect_extension: self.extension.clone(),
+                                duplicate_index: "1".to_owned(),
+                            };
+
+                            tx_futures.unbounded_send(Box::new(TildeBuster::_brute_filename(tx1.clone(), client1.clone(), request))).unwrap();
+                            spawned_futures = spawned_futures + 1;
+                        }
+                    }
+                    FSObject::NotExisting => {
+                        trace!("{:?}", msg);
+                    }
+                    FSObject::DuplicateFile => {
+                        if no_progress_bar {
+                            println!(
+                                "File\t\t{}~{}.{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                                msg.request.extension,
+                            );
+                        } else {
+                            bar.println(format!(
+                                "File\t\t{}~{}.{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                                msg.request.extension,
+                            ));
+                        }
+
+                        result_processor.maybe_add_result(msg);
+                    }
+                    FSObject::DuplicateDirectory => {
+                        if no_progress_bar {
+                            println!(
+                                "Directory\t{}~{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                            );
+                        } else {
+                            bar.println(format!(
+                                "Directory\t{}~{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                            ));
+                        }
+
+                        result_processor.maybe_add_result(msg);
+                    }
+                    FSObject::File => {
+                        if no_progress_bar {
+                            println!(
+                                "File\t\t{}~{}.{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                                msg.request.extension,
+                            );
+                        } else {
+                            bar.println(format!(
+                                "File\t\t{}~{}.{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index,
+                                msg.request.extension,
+                            ));
+                        }
+
+                        for c in chars_duplicate.iter() {
+                            let mut request = msg.request.clone();
+                            request.duplicate_index = c.clone();
+                            tx_futures
+                                .unbounded_send(Box::new(
+                                    TildeBuster::_brute_duplicate(
+                                        tx1.clone(),
+                                        client1.clone(),
+                                        request,
+                                    ),
+                                ))
+                                .unwrap();
+                            spawned_futures = spawned_futures + 1;
+                        }
+
+                        result_processor.maybe_add_result(msg);
+                    }
+                    FSObject::Directory => {
+                        if no_progress_bar {
+                            println!(
+                                "Directory\t{}~{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index
+                            );
+                        } else {
+                            bar.println(format!(
+                                "Directory\t{}~{}",
+                                msg.request.filename,
+                                msg.request.duplicate_index
+                            ));
+                        }
+
+                        for c in chars_duplicate.iter() {
+                            let mut request = msg.request.clone();
+                            request.duplicate_index = c.clone();
+                            tx_futures
+                                .unbounded_send(Box::new(
+                                    TildeBuster::_brute_duplicate(
+                                        tx1.clone(),
+                                        client1.clone(),
+                                        request,
+                                    ),
+                                ))
+                                .unwrap();
+                            spawned_futures = spawned_futures + 1;
+                        }
+
+                        result_processor.maybe_add_result(msg);
+                    }
+                    FSObject::BruteExtension => {
+                        for c in chars1.iter() {
+                            let mut request = msg.request.clone();
+                            request.extension =
+                                format!("{}{}", request.extension, c);
+                            tx_futures
+                                .unbounded_send(Box::new(
+                                    TildeBuster::_brute_extension(
+                                        tx1.clone(),
+                                        client1.clone(),
+                                        request,
+                                    ),
+                                ))
+                                .unwrap();
+                            spawned_futures = spawned_futures + 1;
+                        }
+                    }
+                    FSObject::BruteFilename => {
+                        for c in chars1.iter() {
+                            let mut request = msg.request.clone();
+                            request.filename =
+                                format!("{}{}", request.filename, c);
+                            tx_futures
+                                .unbounded_send(Box::new(
+                                    TildeBuster::_brute_filename(
+                                        tx1.clone(),
+                                        client1.clone(),
+                                        request,
+                                    ),
+                                ))
+                                .unwrap();
+                            spawned_futures = spawned_futures + 1;
+                        }
+                    }
+                    FSObject::CheckIfDirectory => {
+                        tx_futures
+                            .unbounded_send(Box::new(
+                                TildeBuster::_check_if_directory(
+                                    tx1.clone(),
+                                    client1.clone(),
+                                    msg.request,
+                                ),
+                            ))
+                            .unwrap();
+                        spawned_futures = spawned_futures + 1;
+                    }
+                },
+            }
+        }
+
+        bar.finish();
+        println!("{}", crate::banner::ending_time());
+
+        if !output.is_empty() {
+            result_processor.save_tilde_results(&output);
+        }
     }
 
     fn _brute_extension(
@@ -559,14 +547,14 @@ impl TildeBuster {
     }
 
     pub fn check_iis_version(
-        &self,
         client: &Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
     ) -> impl Future<Item = IISVersion, Error = hyper::Error> {
         let hyper_request = Request::builder()
-            .header("User-Agent", &self.user_agent[..])
-            .method(&self.http_method[..])
-            .uri(self.url.parse::<hyper::Uri>().unwrap())
-            .body(Body::from(self.http_body.clone()))
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
+            .uri(request.url.parse::<hyper::Uri>().unwrap())
+            .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
         client
@@ -595,32 +583,32 @@ impl TildeBuster {
     }
 
     pub fn check_if_vulnerable(
-        &self,
         client: &Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
         _version: IISVersion,
     ) -> impl Future<Item = bool, Error = hyper::Error> {
-        let magic_suffix = match &self.extension {
+        let magic_suffix = match &request.redirect_extension {
             Some(v) => format!("*~1*/.{}", v),
             None => "*~1*".to_owned(),
         };
-        let not_existing_suffix = match &self.extension {
+        let not_existing_suffix = match &request.redirect_extension {
             Some(v) => format!("AAAAB*~1/.{}", v),
             None => "AAAAB*~1".to_owned(),
         };
-        let vuln_url = format!("{}{}", self.url, magic_suffix);
-        let not_existing_url = format!("{}{}", self.url, not_existing_suffix);
+        let vuln_url = format!("{}{}", request.url, magic_suffix);
+        let not_existing_url = format!("{}{}", request.url, not_existing_suffix);
         let hyper_request = Request::builder()
-            .header("User-Agent", &self.user_agent[..])
-            .method(&self.http_method[..])
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
             .uri(vuln_url.parse::<hyper::Uri>().unwrap())
-            .body(Body::from(self.http_body.clone()))
+            .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
         let not_existing_hyper_request = Request::builder()
-            .header("User-Agent", &self.user_agent[..])
-            .method(&self.http_method[..])
+            .header("User-Agent", &request.user_agent[..])
+            .method(&request.http_method[..])
             .uri(not_existing_url.parse::<hyper::Uri>().unwrap())
-            .body(Body::from(self.http_body.clone()))
+            .body(Body::from(request.http_body.clone()))
             .expect("Request builder");
 
         let fut1 = client
@@ -655,6 +643,41 @@ impl TildeBuster {
             (true, false) => Ok(true),
             _ => Ok(false),
         })
+    }
+
+    pub fn _run_checks(
+        tx: Sender<SingleTildeScanResult>,
+        client: Client<HttpsConnector<HttpConnector>>,
+        request: TildeRequest,
+    ) -> impl Future<Item = (), Error = ()> {
+        TildeBuster::check_iis_version(&client, request.clone())
+            .and_then(move |version| {
+                futures::future::ok(version.clone())
+                    .join(TildeBuster::check_if_vulnerable(&client.clone(), request.clone(), version))
+                    .and_then(move |(version, is_vulnerable)| {
+                        info!("iis version: {:?}", version);
+                        info!("is vulnerable: {:?}", is_vulnerable);
+                        let res = match is_vulnerable {
+                            true => SingleTildeScanResult {
+                                kind: FSObject::Vulnerable,
+                                error: None,
+                                request: request,
+                            },
+                            false => SingleTildeScanResult {
+                                kind: FSObject::NotVulnerable,
+                                error: None,
+                                request: request,
+                            },
+                        };
+
+                        tx.send(res).unwrap();
+                        Ok(())
+                    })
+            })
+            .or_else(|e| {
+                warn!("Got HTTP error when running checks: {}", e);
+                Ok(())
+            })
     }
 
     pub fn _brute_duplicate(
