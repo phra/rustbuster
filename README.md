@@ -10,7 +10,7 @@ You can download prebuilt binaries from [here](https://github.com/phra/rustbuste
 
 ## Usage
 
-```shell
+```text
 rustbuster 2.1.0
 DirBuster for rust
 
@@ -49,7 +49,7 @@ EXAMPLES:
 
 ### `dir` usage
 
-```shell
+```text
 rustbuster-dir
 Directories and files enumeration mode
 
@@ -85,7 +85,7 @@ EXAMPLE:
 
 ### `dns` usage
 
-```shell
+```text
 rustbuster-dns
 A/AAAA entries enumeration mode
 
@@ -112,7 +112,7 @@ EXAMPLE:
 
 ### `vhost` usage
 
-```shell
+```text
 rustbuster-vhost 
 Virtual hosts enumeration mode
 
@@ -148,7 +148,7 @@ EXAMPLE:
 
 ### `fuzz` usage
 
-```shell
+```text
 rustbuster-fuzz
 Custom fuzzing enumeration mode
 
@@ -195,7 +195,7 @@ EXAMPLE:
 
 ### `tilde` usage
 
-```shell
+```text
 rustbuster-tilde
 IIS 8.3 shortname enumeration mode
 
