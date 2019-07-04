@@ -27,6 +27,7 @@ SUBCOMMANDS:
     fuzz     Custom fuzzing enumeration mode
     help     Prints this message or the help of the given subcommand(s)
     vhost    Virtual hosts enumeration mode
+    tilde    IIS 8.3 shortname enumeration mode
 
 EXAMPLES:
     1. Dir mode:
@@ -45,6 +46,8 @@ EXAMPLES:
             -s 200 \
             --csrf-url "http://localhost:3000/csrf" \
             --csrf-regex '\{"csrf":"(\w+)"\}'
+    5. Tilde mode:
+        rustbuster tilde -u http://localhost:3000/ -e aspx -X OPTIONS
 ```
 
 ### `dir` usage
