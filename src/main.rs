@@ -67,6 +67,8 @@ fn main() {
             -s 200 \\
             --csrf-url \"http://localhost:3000/csrf\" \\
             --csrf-regex '\\{\"csrf\":\"(\\w+)\"\\}'
+    5. Tilde mode:
+        rustbuster tilde -u http://localhost:3000/ -e aspx -X OPTIONS
 ")
         .subcommand(set_wordlist_args(set_dir_args(set_http_args(set_common_args(SubCommand::with_name("dir")))))
             .about("Directories and files enumeration mode")
