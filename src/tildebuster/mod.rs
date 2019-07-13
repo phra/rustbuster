@@ -445,6 +445,12 @@ impl TildeBuster {
                         let res = SingleTildeScanResult {
                             kind: FSObject::CheckIfDirectory,
                             error: None,
+                            request: request.clone(),
+                        };
+                        tx.send(res).unwrap();
+                        let res = SingleTildeScanResult {
+                            kind: FSObject::BruteFilename,
+                            error: None,
                             request: request,
                         };
                         tx.send(res).unwrap();

@@ -14,6 +14,14 @@ app.all("/*", function (req, res) {
         case "web~1.co%3f":
         case "web~1.con":
         case "web.config":
+        case "webc*~1*":
+        case "webco*~1*":
+        case "webcon~1*":
+        case "webcon~1.%3f%3f%3f":
+        case "webcon~1.o%3f%3f":
+        case "webcon~1.ol%3f":
+        case "webcon~1.old":
+        case "web.config.old":
             res.status(404).send();
         break
         default:
@@ -24,4 +32,3 @@ app.all("/*", function (req, res) {
 app.listen(3000, function () {
     console.log("Example app listening on port 3000!");
 });
-
