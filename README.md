@@ -33,7 +33,7 @@ EXAMPLES:
     1. Dir mode:
         rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php
     2. Dns mode:
-        rustbuster dns -u google.com -w examples/wordlist
+        rustbuster dns -d google.com -w examples/wordlist
     3. Vhost mode:
         rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x "Hello"
     4. Fuzz mode:
@@ -110,7 +110,7 @@ OPTIONS:
     -w, --wordlist <wordlist>...    Sets the wordlist
 
 EXAMPLE:
-    rustbuster dns -u google.com -w examples/wordlist
+    rustbuster dns -d google.com -w examples/wordlist
 ```
 
 ### `vhost` usage
