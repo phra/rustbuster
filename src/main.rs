@@ -54,7 +54,7 @@ fn main() {
     1. Dir mode:
         rustbuster dir -u http://localhost:3000/ -w examples/wordlist -e php
     2. Dns mode:
-        rustbuster dns -u google.com -w examples/wordlist
+        rustbuster dns -d google.com -w examples/wordlist
     3. Vhost mode:
         rustbuster vhost -u http://localhost:3000/ -w examples/wordlist -d test.local -x \"Hello\"
     4. Fuzz mode:
@@ -77,7 +77,7 @@ fn main() {
         .subcommand(set_wordlist_args(set_dns_args(set_common_args(SubCommand::with_name("dns"))))
             .about("A/AAAA entries enumeration mode")
             .after_help("EXAMPLE:
-    rustbuster dns -u google.com -w examples/wordlist"))
+    rustbuster dns -d google.com -w examples/wordlist"))
         .subcommand(set_wordlist_args(set_vhost_args(set_http_args(set_common_args(SubCommand::with_name("vhost")))))
             .about("Virtual hosts enumeration mode")
             .after_help("EXAMPLE:
