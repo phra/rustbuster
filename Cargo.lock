@@ -938,7 +938,7 @@ dependencies = [
 
 [[package]]
 name = "rustbuster"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
