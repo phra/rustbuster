@@ -192,7 +192,7 @@ impl FuzzBuster {
         let tx_err2 = tx.clone();
         let mut target = SingleFuzzScanResult {
             url: request.uri.to_string(),
-            method: Method::GET.to_string(),
+            method: request.http_method.clone(),
             status: StatusCode::default().to_string(),
             payload: request.payload.clone(),
             body: request.http_body.clone(),
