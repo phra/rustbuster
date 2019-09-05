@@ -2,7 +2,7 @@ use futures::Stream;
 use hyper::{
     client::HttpConnector,
     rt::{self, Future},
-    Body, Client, Method, Request, StatusCode,
+    Body, Client, Request, StatusCode,
 };
 use hyper_tls::{self, HttpsConnector};
 use itertools::Itertools;
