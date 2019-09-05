@@ -1,6 +1,6 @@
 # rustbuster [![CircleCI](https://circleci.com/gh/phra/rustbuster.svg?style=svg)](https://circleci.com/gh/phra/rustbuster)
 
-DirBuster for Rust  
+A Comprehensive Web Fuzzer and Content Discovery Tool
 [https://iwantmore.pizza/posts/rustbuster.html](https://iwantmore.pizza/posts/rustbuster.html)
 
 [![asciicast](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU.svg)](https://asciinema.org/a/ymyCFj4NBRukQIEcjjzK9JYEU)
