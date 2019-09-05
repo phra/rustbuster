@@ -129,6 +129,8 @@ impl FuzzBuster {
                         warn!("Check connectivity to the target");
                         break;
                     }
+
+                    continue;
                 }
                 None => (),
             }

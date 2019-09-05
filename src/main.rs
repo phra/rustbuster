@@ -204,6 +204,8 @@ fn main() {
                             warn!("Check connectivity to the target");
                             break;
                         }
+
+                        continue;
                     }
                     None => (),
                 }
@@ -413,6 +415,8 @@ fn main() {
                             warn!("Check connectivity to the target");
                             break;
                         }
+
+                        continue;
                     }
                     None => (),
                 }

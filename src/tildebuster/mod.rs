@@ -158,6 +158,8 @@ impl TildeBuster {
                         warn!("Check connectivity to the target");
                         break;
                     }
+
+                    continue;
                 }
                 None => match msg.kind {
                     FSObject::NotVulnerable => {
