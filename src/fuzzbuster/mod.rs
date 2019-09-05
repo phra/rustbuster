@@ -124,7 +124,7 @@ impl FuzzBuster {
 
             match &msg.error {
                 Some(e) => {
-                    error!("{:?}", e);
+                    error!("{} - {:?}", msg.url, e);
                     if current_numbers_of_request == 1 || self.exit_on_connection_errors {
                         warn!("Check connectivity to the target");
                         break;
