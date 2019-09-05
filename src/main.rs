@@ -198,12 +198,14 @@ fn main() {
 
                 match &msg.error {
                     Some(e) => {
-                        error!("{:?}", e);
+                        error!("{} - {:?}", msg.url, e);
                         if current_numbers_of_request == 1 || common_args.exit_on_connection_errors
                         {
                             warn!("Check connectivity to the target");
                             break;
                         }
+
+                        continue;
                     }
                     None => (),
                 }
@@ -407,12 +409,14 @@ fn main() {
 
                 match &msg.error {
                     Some(e) => {
-                        error!("{:?}", e);
+                        error!("{} - {:?}", msg.vhost, e);
                         if current_numbers_of_request == 1 || common_args.exit_on_connection_errors
                         {
                             warn!("Check connectivity to the target");
                             break;
                         }
+
+                        continue;
                     }
                     None => (),
                 }
