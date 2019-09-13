@@ -2,16 +2,13 @@ name: Rust
 
 on: [push]
 
-defaults: &defaults
-  runs-on: ${{ matrix.os }}
-  strategy:
-    matrix:
-      os: [ubuntu-latest, windows-latest, macOS-latest]
-      rust: [stable, nightly]
-
 jobs:
   print_toolchain:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     steps:
       - name: Print toolchain
         run: |
@@ -20,7 +17,11 @@ jobs:
           rustup run ${{ matrix.rust }} rustup --version
 
   checkout:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     steps:
       - uses: actions/checkout@v1
       - uses: actions/upload-artifact@v1
@@ -29,7 +30,11 @@ jobs:
           path: target
 
   build:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [checkout]
     steps:
       - uses: actions/download-artifact@v1
@@ -43,7 +48,11 @@ jobs:
           path: target
 
   build_release:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [checkout, build]
     steps:
       - uses: actions/download-artifact@v1
@@ -57,7 +66,11 @@ jobs:
           path: target
 
   test:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [build]
     steps:
       - uses: actions/download-artifact@v1
@@ -71,7 +84,11 @@ jobs:
           path: target
 
   test_release:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [build_release]
     steps:
       - uses: actions/download-artifact@v1
@@ -85,7 +102,11 @@ jobs:
           path: target
 
   fmt:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [checkout]
     steps:
       - uses: actions/download-artifact@v1
@@ -97,7 +118,11 @@ jobs:
         run: rustup run ${{ matrix.rust }} cargo fmt
 
   clippy:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [checkout]
     steps:
       - uses: actions/download-artifact@v1
@@ -109,7 +134,11 @@ jobs:
         run: rustup run ${{ matrix.rust }} cargo clippy
 
   check:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [checkout]
     steps:
       - uses: actions/download-artifact@v1
@@ -119,7 +148,11 @@ jobs:
         run: rustup run ${{ matrix.rust }} cargo check
 
   bench:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [bench_master, build_release]
     steps:
       - uses: actions/download-artifact@v1
@@ -129,7 +162,11 @@ jobs:
         run: rustup run ${{ matrix.rust }} cargo bench
 
   bench_master:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [build_release]
     steps:
       - uses: actions/download-artifact@v1
@@ -146,7 +183,11 @@ jobs:
           path: target
 
   deploy:
-    <<: *defaults
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust: [stable, nightly]
     needs: [build, build_release, fmt, check, clippy, test, test_release, bench]
     steps:
       - name: Deploy
