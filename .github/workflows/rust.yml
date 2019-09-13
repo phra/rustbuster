@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
         rust: [stable, nightly]
     steps:
       - name: Print toolchain
@@ -40,6 +40,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Build
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo build --verbose
       - uses: actions/upload-artifact@v1
@@ -58,6 +59,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Build
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo build --release --verbose
       - uses: actions/upload-artifact@v1
@@ -76,6 +78,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Run tests
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo test --verbose
       - uses: actions/upload-artifact@v1
@@ -94,6 +97,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Run tests
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo test --release --verbose
       - uses: actions/upload-artifact@v1
@@ -112,6 +116,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Install rustfmt
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustup component add rustfmt
       - name: Run rustfmt
@@ -128,6 +133,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Install clippy
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustup component add clippy
       - name: Run clippy
@@ -144,6 +150,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Run cargo check
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo check
 
@@ -158,6 +165,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - name: Run cargo bench
         run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo bench
 
@@ -172,6 +180,7 @@ jobs:
       - uses: actions/download-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
       - uses: actions/checkout@v1
         with:
           ref: master
