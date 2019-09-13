@@ -12,9 +12,9 @@ jobs:
     steps:
       - name: Print toolchain
         run: |
-          rustup run ${{ matrix.rust }} rustc --version
-          rustup run ${{ matrix.rust }} cargo --version
-          rustup run ${{ matrix.rust }} rustup --version
+          rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustc --version
+          rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo --version
+          rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustup --version
 
   checkout:
     runs-on: ${{ matrix.os }}
@@ -41,7 +41,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Build
-        run: rustup run ${{ matrix.rust }} cargo build --verbose
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo build --verbose
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
@@ -59,7 +59,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Build
-        run: rustup run ${{ matrix.rust }} cargo build --release --verbose
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo build --release --verbose
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
@@ -77,7 +77,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Run tests
-        run: rustup run ${{ matrix.rust }} cargo test --verbose
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo test --verbose
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
@@ -95,7 +95,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Run tests
-        run: rustup run ${{ matrix.rust }} cargo test --release --verbose
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo test --release --verbose
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
@@ -113,9 +113,9 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Install rustfmt
-        run: rustup run ${{ matrix.rust }} rustup component add rustfmt
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustup component add rustfmt
       - name: Run rustfmt
-        run: rustup run ${{ matrix.rust }} cargo fmt
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo fmt
 
   clippy:
     runs-on: ${{ matrix.os }}
@@ -129,9 +129,9 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Install clippy
-        run: rustup run ${{ matrix.rust }} rustup component add clippy
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} rustup component add clippy
       - name: Run clippy
-        run: rustup run ${{ matrix.rust }} cargo clippy
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo clippy
 
   check:
     runs-on: ${{ matrix.os }}
@@ -145,7 +145,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Run cargo check
-        run: rustup run ${{ matrix.rust }} cargo check
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo check
 
   bench:
     runs-on: ${{ matrix.os }}
@@ -159,7 +159,7 @@ jobs:
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
       - name: Run cargo bench
-        run: rustup run ${{ matrix.rust }} cargo bench
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo bench
 
   bench_master:
     runs-on: ${{ matrix.os }}
@@ -176,7 +176,7 @@ jobs:
         with:
           ref: master
       - name: Run cargo bench on master
-        run: rustup run ${{ matrix.rust }} cargo bench
+        run: rustup toolchain install ${{ matrix.rust }} && rustup run ${{ matrix.rust }} cargo bench
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
