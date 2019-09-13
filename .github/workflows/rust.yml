@@ -27,7 +27,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   build:
     runs-on: ${{ matrix.os }}
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   build_release:
     runs-on: ${{ matrix.os }}
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   test:
     runs-on: ${{ matrix.os }}
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   test_release:
     runs-on: ${{ matrix.os }}
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   fmt:
     runs-on: ${{ matrix.os }}
@@ -180,7 +180,7 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
 
   deploy:
     runs-on: ${{ matrix.os }}
@@ -195,4 +195,4 @@ jobs:
       - uses: actions/upload-artifact@v1
         with:
           name: workspace-${{ matrix.os }}-${{ matrix.rust }}
-          path: target
+          path: .
