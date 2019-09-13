@@ -2,14 +2,156 @@ name: Rust
 
 on: [push]
 
+defaults: &defaults
+  runs-on: ${{ matrix.os }}
+  strategy:
+    matrix:
+      os: [ubuntu-latest, windows-latest, macOS-latest]
+      rust: [stable, nightly]
+
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  print_toolchain:
+    <<: *defaults
     steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Print toolchain
+        run: |
+          rustup run ${{ matrix.rust }} rustc --version
+          rustup run ${{ matrix.rust }} cargo --version
+          rustup run ${{ matrix.rust }} rustup --version
+
+  checkout:
+    <<: *defaults
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  build:
+    <<: *defaults
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Build
+        run: rustup run ${{ matrix.rust }} cargo build --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  build_release:
+    <<: *defaults
+    needs: [checkout, build]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Build
+        run: rustup run ${{ matrix.rust }} cargo build --release --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  test:
+    <<: *defaults
+    needs: [build]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Run tests
+        run: rustup run ${{ matrix.rust }} cargo test --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  test_release:
+    <<: *defaults
+    needs: [build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Run tests
+        run: rustup run ${{ matrix.rust }} cargo test --release --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  fmt:
+    <<: *defaults
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Install rustfmt
+        run: rustup run ${{ matrix.rust }} rustup component add rustfmt
+      - name: Run rustfmt
+        run: rustup run ${{ matrix.rust }} cargo fmt
+
+  clippy:
+    <<: *defaults
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Install clippy
+        run: rustup run ${{ matrix.rust }} rustup component add clippy
+      - name: Run clippy
+        run: rustup run ${{ matrix.rust }} cargo clippy
+
+  check:
+    <<: *defaults
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Run cargo check
+        run: rustup run ${{ matrix.rust }} cargo check
+
+  bench:
+    <<: *defaults
+    needs: [bench_master, build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - name: Run cargo bench
+        run: rustup run ${{ matrix.rust }} cargo bench
+
+  bench_master:
+    <<: *defaults
+    needs: [build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+      - uses: actions/checkout@v1
+        with:
+          ref: master
+      - name: Run cargo bench on master
+        run: rustup run ${{ matrix.rust }} cargo bench
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
+
+  deploy:
+    <<: *defaults
+    needs: [build, build_release, fmt, check, clippy, test, test_release, bench]
+    steps:
+      - name: Deploy
+        run: echo todo
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: target
