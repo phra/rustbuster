@@ -19,7 +19,7 @@ use args::*;
 use dirbuster::{
     result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
     utils::*,
-    DirConfig,
+    DirBuster,
 };
 use dnsbuster::{
     result_processor::{DnsScanResult, SingleDnsScanResult},
@@ -142,118 +142,26 @@ fn main() {
             }
 
             let dir_args = extract_dir_args(submatches);
-            let urls = build_urls(
-                &wordlist_args.wordlist_paths[0],
-                &http_args.url,
-                dir_args.extensions,
-                dir_args.append_slash,
-            );
-            let total_numbers_of_request = urls.len();
-            let (tx, rx) = channel::<SingleDirScanResult>();
-            let config = DirConfig {
-                n_threads: common_args.n_threads,
-                ignore_certificate: http_args.ignore_certificate,
-                http_method: http_args.http_method.to_owned(),
-                http_body: http_args.http_body.to_owned(),
-                user_agent: http_args.user_agent.to_owned(),
-                http_headers: http_args.http_headers.clone(),
+
+            let dirbuster = DirBuster {
+                    n_threads: common_args.n_threads,
+                    ignore_certificate: http_args.ignore_certificate,
+                    http_method: http_args.http_method.to_owned(),
+                    http_body: http_args.http_body.to_owned(),
+                    user_agent: http_args.user_agent.to_owned(),
+                    http_headers: http_args.http_headers.clone(),
+                    url: http_args.url.to_owned(),
+                    wordlist_path: wordlist_args.wordlist_paths[0].to_owned(),
+                    extensions: dir_args.extensions.clone(),
+                    append_slash: dir_args.append_slash,
+                    include_status_codes: http_args.include_status_codes.clone(),
+                    ignore_status_codes: http_args.ignore_status_codes.clone(),
+                    no_progress_bar: common_args.no_progress_bar,
+                    exit_on_connection_errors: common_args.exit_on_connection_errors,
+                    output: common_args.output.clone(),
             };
-            let rp_config = ResultProcessorConfig {
-                include: http_args.include_status_codes,
-                ignore: http_args.ignore_status_codes,
-            };
-            let mut result_processor = ScanResult::new(rp_config);
-            let bar = if common_args.no_progress_bar {
-                ProgressBar::hidden()
-            } else {
-                ProgressBar::new(total_numbers_of_request as u64)
-            };
-            bar.set_draw_delta(100);
-            bar.set_style(ProgressStyle::default_bar()
-                .template("{spinner} [{elapsed_precise}] {bar:40.red/white} {pos:>7}/{len:7} ETA: {eta_precise} req/s: {msg}")
-                .progress_chars("#>-"));
 
-            thread::spawn(move || dirbuster::run(tx, urls, config));
-
-            while current_numbers_of_request != total_numbers_of_request {
-                current_numbers_of_request = current_numbers_of_request + 1;
-                bar.inc(1);
-                let seconds_from_start = start_time.elapsed().unwrap().as_millis() / 1000;
-                if seconds_from_start != 0 {
-                    bar.set_message(
-                        &(current_numbers_of_request as u64 / seconds_from_start as u64)
-                            .to_string(),
-                    );
-                } else {
-                    bar.set_message("warming up...")
-                }
-
-                let msg = match rx.recv() {
-                    Ok(msg) => msg,
-                    Err(_err) => {
-                        error!("{:?}", _err);
-                        break;
-                    }
-                };
-
-                match &msg.error {
-                    Some(e) => {
-                        error!("{} - {:?}", msg.url, e);
-                        if current_numbers_of_request == 1 || common_args.exit_on_connection_errors
-                        {
-                            warn!("Check connectivity to the target");
-                            break;
-                        }
-
-                        continue;
-                    }
-                    None => (),
-                }
-
-                let was_added = result_processor.maybe_add_result(msg.clone());
-                if was_added {
-                    let mut extra = msg.extra.unwrap_or("".to_owned());
-
-                    if !extra.is_empty() {
-                        extra = format!("\n\t\t\t\t\t\t=> {}", extra)
-                    }
-
-                    let n_tabs = match msg.status.len() / 8 {
-                        3 => 1,
-                        2 => 2,
-                        1 => 3,
-                        0 => 4,
-                        _ => 0,
-                    };
-
-                    if common_args.no_progress_bar {
-                        println!(
-                            "{}\t{}{}{}{}",
-                            msg.method,
-                            msg.status,
-                            "\t".repeat(n_tabs),
-                            msg.url,
-                            extra
-                        );
-                    } else {
-                        bar.println(format!(
-                            "{}\t{}{}{}{}",
-                            msg.method,
-                            msg.status,
-                            "\t".repeat(n_tabs),
-                            msg.url,
-                            extra
-                        ));
-                    }
-                }
-            }
-
-            bar.finish();
-            println!("{}", banner::ending_time());
-
-            if !common_args.output.is_empty() {
-                save_dir_results(&common_args.output, &result_processor.results);
-            }
+            dirbuster.run();
         }
         "dns" => {
             let wordlist_args = match extract_wordlist_args(submatches) {
