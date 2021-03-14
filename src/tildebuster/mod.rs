@@ -9,16 +9,12 @@ use native_tls;
 use std::boxed::Box;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-
+use std::time::SystemTime;
+use indicatif::{ProgressBar, ProgressStyle};
 use futures::sync::mpsc;
 
 pub mod result_processor;
-
 use result_processor::{FSObject, SingleTildeScanResult, TildeRequest, TildeScanProcessor};
-
-use std::time::SystemTime;
-
-use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Debug, Clone)]
 pub struct TildeBuster {

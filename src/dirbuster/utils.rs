@@ -5,7 +5,7 @@ use super::result_processor::SingleDirScanResult;
 pub fn build_urls(
     wordlist_path: &str,
     url: &str,
-    extensions: Vec<String>,
+    extensions: &Vec<String>,
     append_slash: bool,
 ) -> Vec<hyper::Uri> {
     debug!("building urls");

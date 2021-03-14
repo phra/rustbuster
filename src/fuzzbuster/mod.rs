@@ -10,18 +10,14 @@ use native_tls;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
+use std::{fs, time::SystemTime};
+use indicatif::{ProgressBar, ProgressStyle};
+use regex::Regex;
 
-pub mod result_processor;
 mod spec;
 pub mod utils;
-
+pub mod result_processor;
 use result_processor::{FuzzScanProcessor, FuzzScanProcessorConfig, SingleFuzzScanResult};
-
-use std::{fs, time::SystemTime};
-
-use indicatif::{ProgressBar, ProgressStyle};
-
-use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct FuzzBuster {
