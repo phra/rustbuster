@@ -4,8 +4,6 @@ extern crate log;
 extern crate clap;
 
 use clap::{App, SubCommand};
-use indicatif::{ProgressBar, ProgressStyle};
-use std::{sync::mpsc::channel, thread, time::SystemTime};
 
 mod args;
 mod banner;
@@ -16,23 +14,11 @@ mod tildebuster;
 mod vhostbuster;
 
 use args::*;
-use dirbuster::{
-    result_processor::{ResultProcessorConfig, ScanResult, SingleDirScanResult},
-    utils::*,
-    DirBuster,
-};
-use dnsbuster::{
-    result_processor::{DnsScanResult, SingleDnsScanResult},
-    utils::*,
-    DnsBuster,
-};
-use tildebuster::TildeBuster;
-use vhostbuster::{
-    result_processor::{SingleVhostScanResult, VhostScanResult},
-    utils::*,
-    VhostBuster,
-};
 
+use dirbuster::DirBuster;
+use dnsbuster::DnsBuster;
+use tildebuster::TildeBuster;
+use vhostbuster::VhostBuster;
 use fuzzbuster::FuzzBuster;
 
 fn main() {

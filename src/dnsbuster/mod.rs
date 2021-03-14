@@ -1,19 +1,14 @@
 use futures::{future, Future, Stream};
 use hyper::rt;
-
 use std::{net::ToSocketAddrs, sync::mpsc::Sender};
+use std::sync::mpsc::channel;
+use std::{time::SystemTime};
+use indicatif::{ProgressBar, ProgressStyle};
 
 pub mod result_processor;
 pub mod utils;
-
 use result_processor::{SingleDnsScanResult, DnsScanResult};
-use std::sync::mpsc::channel;
-
 use utils::{build_domains, save_dns_results};
-
-use std::{fs, time::SystemTime};
-
-use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Debug, Clone)]
 pub struct DnsBuster {

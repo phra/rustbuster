@@ -6,12 +6,9 @@ use hyper::{
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
-use futures::sync::mpsc;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-
-use std::{fs, time::SystemTime};
-
+use std::{time::SystemTime};
 use indicatif::{ProgressBar, ProgressStyle};
 
 pub mod result_processor;

@@ -6,18 +6,15 @@ use hyper::{
 };
 use hyper_tls::{self, HttpsConnector};
 use native_tls;
-
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::sync::mpsc::channel;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::{time::SystemTime};
 
 pub mod result_processor;
-pub mod utils;
-
-use utils::{build_vhosts, save_vhost_results};
-use std::{fs, time::SystemTime};
-
 use result_processor::{SingleVhostScanResult, VhostScanResult};
+pub mod utils;
+use utils::{build_vhosts, save_vhost_results};
 
 #[derive(Debug, Clone)]
 pub struct VhostBuster {
