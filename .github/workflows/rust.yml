@@ -3,13 +3,205 @@ name: Rust
 on: [push]
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  print_toolchain:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
     steps:
-    - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Print toolchain
+        run: |
+          rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} rustc --version
+          rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo --version
+          rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} rustup --version
+
+  checkout:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Build
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo build --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  build_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [checkout, build]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Build
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo build --release --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [build]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Run tests
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo test --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  test_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Run tests
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo test --release --verbose
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  fmt:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Install rustfmt
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} rustup component add rustfmt
+      - name: Run rustfmt
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo fmt
+
+  clippy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Install clippy
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} rustup component add clippy
+      - name: Run clippy
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo clippy
+
+  check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [checkout]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Run cargo check
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo check
+
+  bench:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [bench_master, build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - name: Run cargo bench
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo bench
+
+  bench_master:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [build_release]
+    steps:
+      - uses: actions/download-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+      - uses: actions/checkout@v1
+        with:
+          ref: master
+      - name: Run cargo bench on master
+        run: rustup toolchain install ${{ matrix.rust }} --no-self-update && rustup run ${{ matrix.rust }} cargo bench
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
+
+  deploy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable, nightly]
+    needs: [build, build_release, fmt, check, clippy, test, test_release, bench]
+    steps:
+      - name: Deploy
+        run: echo todo
+      - uses: actions/upload-artifact@v1
+        with:
+          name: workspace-${{ matrix.os }}-${{ matrix.rust }}
+          path: .
