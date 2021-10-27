@@ -29,6 +29,7 @@ regex = "^1.1.7"
 galvanic-test = "^0.2.0"
 galvanic-assert = "0.8.7"
 criterion = "^0.2.11"
+console = "^0.15.0"
 
 [[bench]]
 name = "rustbuster"

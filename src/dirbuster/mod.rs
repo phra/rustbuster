@@ -10,6 +10,7 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::{time::SystemTime};
 use indicatif::{ProgressBar, ProgressStyle};
+use console::style;
 
 pub mod result_processor;
 pub mod utils;
@@ -34,6 +35,25 @@ pub struct DirBuster {
     pub no_progress_bar: bool,
     pub exit_on_connection_errors: bool,
     pub output: String,
+}
+
+fn color_by_status_code(code: &str) -> String {
+    if code.starts_with("1") {
+        return style(code).blue().to_string();
+    }
+    else if code.starts_with("2") {
+        return style(code).green().to_string();
+    }
+    else if code.starts_with("3") {
+        return style(code).color256(226).to_string();
+    }
+    else if code.starts_with("4") {
+        return style(code).color256(208).to_string();
+    }
+    else if code.starts_with("5") {
+        return style(code).red().to_string();
+    }
+    return style(code).bold().to_string();
 }
 
 impl DirBuster {
@@ -150,7 +170,7 @@ impl DirBuster {
                     bar.println(format!(
                         "{}\t{}{}{}{}",
                         msg.method,
-                        msg.status,
+                        color_by_status_code(&msg.status),
                         "\t".repeat(n_tabs),
                         msg.url,
                         extra
@@ -166,7 +186,7 @@ impl DirBuster {
             save_dir_results(&output, &result_processor.results);
         }
     }
-    
+
     fn make_request_future(
         &self,
         tx: Sender<SingleDirScanResult>,
