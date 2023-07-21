@@ -3,6 +3,8 @@ name = "rustbuster"
 version = "3.0.3"
 authors = ["phra <greensoncio@gmail.com>", "ps1dr3x <michele@federici.tech>"]
 edition = "2018"
+description="A Comprehensive Web Fuzzer and Content Discovery Tool"
+license="GPL-3.0-or-later"
 
 [[bin]]
 name = "rustbuster"
